@@ -1,27 +1,19 @@
 import OpenAI from 'openai';
-import { AppDataSource } from '../data-source';
 import { ContentCalendar } from '../entities/ContentCalendar';
-import FireCrawlApp from '@mendable/firecrawl-js';
-
+import { AppDataSource } from '../data-source';
+import { Article } from '../entities/Article';
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
 
-const app = new FireCrawlApp({apiKey: process.env.FIRECRAWL_API_KEY});
-
 const contentRepository = AppDataSource.getRepository(ContentCalendar);
+const articleRepository = AppDataSource.getRepository(Article);
 
-export const generateContentCalender = {
-    generateIdeas: async (companyInfo: string, date: string, website: string) => {
-        console.log('Starting content generation with:', { companyInfo, date });
-        
-        // First scrape the shop overview page
-        const scrapeResult = await app.scrapeUrl(website, {
-            formats: [ "markdown" ],
-        });
-        
-        console.log('Scrape result:', scrapeResult);
-
+export const aiGenerateService = {
+    
+    // Generate a content calender for a company of which you have all necessary information. The calender structure is 
+    // hardcoded and the only variables in this version is the specific company and information about the company.
+    generateCalender: async (companyInfo: string, date: string, scrapeResult: string) => {
         const prompt = `
             Generate 20 SEO content ideas for:
             -------------   COMPANY INFO  -------------
@@ -46,17 +38,15 @@ export const generateContentCalender = {
                         "title": "Title of the content",
                         "event": "Event of the content",
                         "description": "Description of the content",
-                        "date": "Date of the content",
-                        "relevant_shops": ["shop1", "shop2", "shop3"],
-                        "status": "Status of the content",
+                        "status": "draft",
                         "potential_keywords": "Potential keywords of the content",
-                        "search_potential": "Score between 1 and 10 based on search potential"
+                        "search_potential": "Score between 1 and 10 based on search potential",
+                        "winkel_voorbeelden": "Winkel voorbeelden of winkels die actie.nl ook echt op de website heeft",
+                        "date": "Date of the content"
                     }
                 ]
             }
         `;
-        
-        console.log('Using prompt:', prompt);
 
         const completion = await openai.chat.completions.create({
             messages: [{ role: "user", content: prompt }],
@@ -64,15 +54,12 @@ export const generateContentCalender = {
             response_format: { type: "json_object" }
         });
 
-        console.log('OpenAI response:', completion.choices[0].message);
-
         if (!completion.choices[0].message.content) {
-            throw new Error('No content generated');
+        throw new Error('No content generated');
         }
 
         const content = JSON.parse(completion.choices[0].message.content);
         console.log('Parsed content:', content);
-
         // Access the ideas array from the content
         const contentItems = content.ideas || [];
         const parsedContent = contentItems.map((item: any) => ({   
@@ -82,16 +69,55 @@ export const generateContentCalender = {
             status: item.status || 'draft',
             potential_keywords: item.potential_keywords || '',
             search_potential: item.search_potential || '',
-            relevant_shops: item.relevant_shops || [],
+            winkel_voorbeelden: item.winkel_voorbeelden || '',
             date: item.date || ''
         }));
 
         console.log('Formatted content for database:', parsedContent);
-        
-        if (!content) {
-            throw new Error('No content generated');
-        }
         // Save to database
         return await contentRepository.save(parsedContent);
+    },
+    generateStoreList: async (contentId: number, availableStores: string) => {
+        const contentItem = await contentRepository.findOneBy({ id: contentId });
+        if (!contentItem) {
+            throw new Error('No content item found for the provided ID');
+        }
+
+        const prompt = `
+            
+            -------------   INSTRUCTIONS  -------------
+            Generate a list of relevant stores for the article content. Try to find 50 relevant stores, but if there are less availabe that are relevant to the content answer with less.
+            
+            -------------   CONTENT  -------------
+            The content is: ${contentItem.title}
+
+            -------------   AVAILABLE STORES  -------------
+            The set of Available stores is: ${availableStores}
+
+            -------------   FORMAT  -------------
+            Format the response as a JSON object with the following fields:
+            {
+                "stores": [
+                {"name of store1":"https://www.store1.nl"}, 
+                {"name of store2":"https://www.store2.nl"}, 
+                {"name of store3":"https://www.store3.nl"}
+                ]
+            }
+        `;
+
+        const completion = await openai.chat.completions.create({
+            messages: [{ role: "user", content: prompt }],
+            model: "o1",
+            response_format: { type: "json_object" }
+        });
+        
+        if (!completion.choices[0].message.content) {
+            throw new Error('No content generated');
+        }
+
+        const content = JSON.parse(completion.choices[0].message.content);
+        console.log('Parsed content:', content);
+        
+        return content.stores;
     }
-}; 
+}
