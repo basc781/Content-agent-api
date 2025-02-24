@@ -16,6 +16,9 @@ export class Article {
     @Column()
     contentCalendarId!: number
 
-    @Column()
-    version!: string
+    @Column({ 
+        type: 'datetime', 
+        default: () => 'CURRENT_TIMESTAMP' 
+    })
+    createdAt!: Date
 } 

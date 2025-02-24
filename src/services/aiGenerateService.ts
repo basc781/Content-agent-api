@@ -1,7 +1,9 @@
 import OpenAI from 'openai';
 import { ContentCalendar } from '../entities/ContentCalendar';
-import { AppDataSource } from '../data-source';
 import { Article } from '../entities/Article';
+import { AppDataSource } from '../data-source';
+import fs from 'fs';
+
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
 });
@@ -119,5 +121,134 @@ export const aiGenerateService = {
         console.log('Parsed content:', content);
         
         return content.stores;
+    },
+    summarizeArticle: async (articleContext: Array<Record<string, any>>) => {
+        for (const store of articleContext) {
+            const [storeName, data] = Object.entries(store)[0];
+            try {
+                // Parse the JSON content string
+                const parsedContent = JSON.parse(data.content);
+                
+                const prompt = `find the best most interesting deal on this page and summarise it in one sentence. Respond with {"best_deal":"the deal"}`;
+                
+                const completion = await openai.chat.completions.create({
+                    messages: [
+                        { 
+                            role: "user", 
+                            content: `${JSON.stringify(parsedContent)}\n\n${prompt} kan je deze in een json format teruggeven` 
+                        }
+                    ],
+                    model: "gpt-4o",
+                    response_format: { type: "json_object" }
+                });
+
+                const bestDeal = JSON.parse(completion.choices[0].message.content || '{}').best_deal;
+                
+                if (!bestDeal) {
+                    throw new Error('No best deal found');
+                }
+                
+                // Add summary directly to the store object
+                store[storeName].summary = bestDeal;
+
+            } catch (error) {
+                console.error(`Error processing ${storeName}:`, error);
+                store[storeName].summary = { 
+                    error: `Failed to process: ${(error as Error).message}` 
+                };
+            }
+        }
+        
+        return articleContext;
+    },
+    generateArticle: async (summarisedAritcleContext: Array<Record<string, any>>, contentId: number, imageUrls: Array<string>) => {
+        console.log('Input context:', summarisedAritcleContext);
+        
+        const contentItem = await contentRepository.findOneBy({ id: contentId });
+        if (!contentItem) {
+            throw new Error('No content item found for the provided ID');
+        }
+        console.log('Content item:', contentItem);
+
+        // Create a string of alternating URLs and summaries
+        const contextString = summarisedAritcleContext.map(store => {
+            const [storeName, data] = Object.entries(store)[0];
+            console.log('Processing store data:', data);
+            return `${storeName}\n${data.url}\n${data.summary}`;  // Access summary directly as it's a string
+        }).join('\n\n');
+
+        console.log('Generated context item AKJSNDJANJKDNJKASNKJDNJKASNJKDNKJASNDKsandjknaskjndjksanbjkdnaskjbdkjbasjkdbkjasbdjksabk asjkbdjksabkjdbkjasdbkjasbdkj\J', JSON.stringify(contentItem));
+
+        const prompt = `
+        ------- Onderwerp van het artikel ---------
+        ${contentItem.title} Door acties.nl
+        ${contentItem.description}
+        ${contentItem.event}
+        ${contentItem.date}
+
+        ----- Begin schrijfregels -----
+        Je bent een expert SEO schrijver en gaat een artikel voor mij schrijven met de volgende regels: ${fs.readFileSync('./src/prompts/prompt_generateArticle.txt', 'utf8')}
+        
+        ----Einde schrijfregels -----
+        
+        Belangrijk is dat je ALTIJD in markdown reageert. Zet ook lekker veel backlinks in van de relevante pagina's die je hieronder meekrijgt.
+        
+        ---- Assets die je kunt gebruiken -----
+        Voeg deze toe aan relevante plekken in het artikel. Probeer ze tussen de subkoppen door te plaatsen:
+        ${JSON.stringify(imageUrls)}
+
+
+
+        ---- Context ---------        
+        ${contextString}
+        `
+
+        console.log('DIT IS DE Prompt LUL:', prompt);
+
+        const completion = await openai.chat.completions.create({
+            messages: [{ role: "user", content: prompt }],
+            model: "o1"
+        });
+
+        const article = completion.choices[0].message.content;
+        console.log('Generated article:', article);
+
+        const newArticle = new Article();
+        newArticle.text = article  || '';
+        newArticle.contentCalendarId = contentItem.id  || 0;
+        await articleRepository.save(newArticle);
+
+        return article;
+    },
+    validateFormData: async (formData: any) => {
+        const prompt = `
+        Aan jou de taak om te gaan valideren of de form data correct is. Dit ga je doen op basis van de volgende regels:
+        ${fs.readFileSync('./src/prompts/prompt_checkFormData.txt', 'utf8')}
+        
+        -------------- EIND REGELS EN BEGIN FORM DATA --------------
+
+        Hier is de form data die je moet valideren:
+        ${JSON.stringify(formData)}
+
+        -------------- EIND FORM DATA BEGIN JSON FORMAT --------------
+        Antwoord met valid wanneer er geen brekende of kritieke fouten zijn.
+        Als er wel grote/brekende fouten zijn, geef dan aan wat de fout is en geef beknopte en actie gerichte feedback.
+        {
+            "valid": true,
+            "feedback": [
+                "feedback1",
+                "feedback2",
+                ...
+            ]
+        }
+        `;
+        const completion = await openai.chat.completions.create({
+            messages: [{ role: "user", content: prompt }],
+            model: "o1",
+            response_format: { type: "json_object" }
+        });
+
+        const validation = JSON.parse(completion.choices[0].message.content || '{}');
+        return validation;
     }
 }

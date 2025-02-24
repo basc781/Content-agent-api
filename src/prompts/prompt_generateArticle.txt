@@ -1,0 +1,45 @@
+Schrijf een enthousiast en toegankelijk artikel waarin aanbiedingen en deals gepresenteerd worden, met een duidelijke structuur en een informele, vriendelijke toon. Zorg ervoor dat elke sectie voldoende context biedt voordat je bullet points gebruikt, zodat de lezer de informatie kan begrijpen en in een natuurlijke flow door de tekst gaat. Volg de onderstaande richtlijnen:
+
+Structuur en Indeling:
+Introductie over het hoofd onderwerp:
+Begin met een energieke, enthousiaste inleiding die de lezer direct uitnodigt om verder te lezen. Geef duidelijk aan wat het artikel behandelt en wat de lezer kan verwachten. Het moet aanzetten tot verder lezen.
+De intro heeft GEEN titel en bestaat dus alleen uit een introducerende paragraaf. Deze paragraaf moet volledig bold zijn, voeg dit dus toe met markdown styling.
+
+Na de intro volgt nog een introductie paragraaf over wanneer het hoofdonderwerp van het artikel zich afspeelt. Deze paragraaf heeft WEL een titel nodig.   
+
+Voeg hier een markdown scheidingslijn toe
+
+De structuur vanuit hier moet zijn:
+- Subkop van 1 regel
+- 1 a 2 Paragraven tekst over dit subkop 
+- Een lijst met voor elke bullet point een interessante winkelketen en hun beste deal inclusief backlink. 
+- Voeg hier een markdown scheidingslijn toe
+
+Subkoppen:
+Gebruik duidelijke en informatieve subkoppen voor de verschillende secties van het artikel. Zorg ervoor dat elke sectie een specifieke doelgroep/behoefte aanspreekt die als subdoel/sub-behoefte gezien kan worden vanuit het hoofd onderwerp.
+
+Paragrafen per subkop:
+Elke subkop begint met een tekstuele paragraaf om het onderwerp te introduceren:
+Bijvoorbeeld: "Als je op zoek bent naar cadeaus voor een man, hebben we enkele geweldige aanbiedingen gevonden die je absoluut niet wilt missen. Kijk snel naar de kortingen die je kunt gebruiken om te besparen!" Vul dit ook wat verder aan met aansprekende content per subkop, dit kun je aanvullen met merkspecifieke voorbeelden.
+
+Elke subkop eindigd met een lijst met aanbiedingen:
+Presenteer de aanbiedingen in bullet points, met duidelijke informatie over de winkel, de aanbieding, de kortingscode (indien van toepassing), en de voorwaarden. Zorg ervoor dat deze gemakkelijk te scannen zijn en de lezer snel kunnen helpen bij het vinden van de juiste deal.
+
+Tussen de subkoppen in moeten soms inhoudelijke paragrafen worden toegevoegd om de lezer te informeren over het verloop van het hoofdonderwerp. Dit moeten extra paragraven zijn met titels en tekst. Dit hoeft niet tussen elke subkop, maar wel een aantal keer in het artikel. Check goed hoeveel paragrafen je nodig hebt.
+
+Eindig het artikel met een krachtige oproep tot actie. Moedig de lezer aan om de aanbiedingen te bekijken, producten te kopen of een actie te ondernemen. Maak het duidelijk dat ze nu moeten handelen. Doe dit met een bijpassende paragraaf en titel
+
+Tone of Voice:
+Toegankelijk en Vlot: Schrijf in een eenvoudige, informele stijl die gemakkelijk te lezen is. Vermijd lange, complexe zinnen. Enthousiast: Maak de lezer enthousiast over de aanbiedingen en kortingen. Gebruik actieve werkwoorden die aanzetten tot actie. Empathisch en Helpzaam: Wees behulpzaam en laat de lezer weten dat je hen ondersteunt bij het vinden van de beste deals. Houd de zinnen kort en krachtig. Vermijd lange paragrafen en zorg ervoor dat de lezer snel door de tekst kan scannen zonder teveel moeite.
+
+Tone of Voice Informatie en Details:
+Geef relevante informatie over de aanbiedingen, zoals specifieke voordelen, gebruiksgemak of waarom het product of de aanbieding bijzonder is. Dit helpt de lezer een geïnformeerde beslissing te nemen.
+
+Tone of Voice Kortingscodes en Aanbiedingen:
+Wees zo specifiek mogelijk over de kortingen, en geef de lezer duidelijke instructies over hoe ze de deal kunnen verkrijgen (bijvoorbeeld het invoeren van een kortingscode of het klikken op een link).
+
+Actieve Werkwoorden:
+Gebruik actieve werkwoorden zoals “koop”, “bespaar”, “ontdek”, en “geniet” om de lezer te activeren en aan te moedigen tot actie.
+
+Einddoel:
+Zorg ervoor dat de lezer enthousiast is over de aanbiedingen en precies weet hoe ze kunnen profiteren van de deals. Maak de tekst vloeiend en goed gestructureerd, zodat de lezer makkelijk door het artikel kan gaan zonder te verdwalen in enkel lijstjes.

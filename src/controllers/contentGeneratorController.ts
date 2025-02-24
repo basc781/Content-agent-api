@@ -1,44 +1,7 @@
 import { Request, Response } from 'express';
 import { scraperService } from '../services/scraperService';
 import { aiGenerateService } from '../services/aiGenerateService';
-// import { generateContentCalender } from '../services/generateContentCalender';
-// import { articleGeneratorService } from '../services/generateArticle';
-
-// export const contentGeneratorController = {
-//     generateContentCalender: async (req: Request, res: Response): Promise<void> => {
-//         try {
-//             if (!req.body.companyinfo || !req.body.date || !req.body.website) {
-//                 res.status(400).json({ error: "Missing required fields: companyinfo and date" });
-//                 return;
-//             }
-
-//             const ideas = await generateContentCalender.generateIdeas(
-//                 req.body.companyinfo,
-//                 req.body.date,
-//                 req.body.website
-//             );
-
-//             res.json(ideas);
-//         } catch (error) {
-//             res.status(500).json({ error: "Failed to generate content ideas" });
-//         }
-//     },
-//     generateArticle: async (req: Request, res: Response): Promise<void> => {
-//         try {
-//             if (!req.body.version) {
-//                 res.status(400).json({ error: "Missing required field: version" });
-//                 return;
-//             }
-
-//             const articles = await articleGeneratorService.generateArticles(req.body.version);
-//             res.json(articles);
-//         } catch (error) {
-//             console.error('Article generation error:', error);
-//             res.status(500).json({ error: "Failed to generate articles" });
-//         }
-//     }
-// }; 
-
+import { uploadToDatabaseService } from '../services/uploadToDatabaseService';
 
 export const contentGeneratorController = {
     generateContentCalender: async (req: Request, res: Response): Promise<void> => {
@@ -63,22 +26,57 @@ export const contentGeneratorController = {
     },
     generateArticle: async (req: Request, res: Response): Promise<void> => {
         try {
-            if (!req.body.contentId || !req.body.website) {
-                res.status(400).json({ error: "Missing required field: contentIds or website" });
+            // Check if body has everything for content calendar based article
+            if (req.body.contentId && req.body.website && req.body.imageUrls) {
+                console.log("Making article from content calendar");
+            }
+            // Check if body has everything for form based article
+            else if (req.body.titel && req.body.event && req.body.beschrijving && req.body.potentialKeywords && req.body.datum && req.body.winkelvoorbeelden && req.body.website && req.body.imageUrls) {
+                console.log("Making article from input form");
+                const contentCalendar = await uploadToDatabaseService.createContentCalendar(req.body);
+                req.body.contentId = contentCalendar.id;
+                console.log("Content calendar created with id: ", req.body.contentId);
+            }
+            else {
+                res.status(400).json({ error: "Missing required fields for either content calendar or form based article" });
                 return;
-            }    
+            }
 
             const availableStores = await scraperService.companyContext(req.body.website);
 
             const filteredStoreList = await aiGenerateService.generateStoreList(req.body.contentId, JSON.stringify(availableStores));
             console.log("Filtered store list: ", filteredStoreList);
 
-            //Function to add more info to the the filteredstorelist json by scraping the url's that are in the
-            res.json(filteredStoreList);
+            // Get article context by scraping all filtered stores
+            const articleContext = await scraperService.articleContext(filteredStoreList);
+            console.log("Article context: ", articleContext);
+            
+            const summarisedAritcleContext = await aiGenerateService.summarizeArticle(articleContext as any);
+            console.log("Summarised article context: ", summarisedAritcleContext);
+            
+
+            const article = await aiGenerateService.generateArticle(summarisedAritcleContext, req.body.contentId, req.body.imageUrls);
+            console.log("Article: ", article);
+
+            res.json({article: article});
         } 
         catch (error) {
             console.error('Article generation error:', error);
             res.status(500).json({ error: "Failed to generate articles" });
+        }
+    },
+    checkFormData: async (req: Request, res: Response): Promise<void> => {
+        
+        console.log("Checking form data");
+        if (req.body.titel && req.body.event && req.body.beschrijving && req.body.potentialKeywords && req.body.datum && req.body.winkelvoorbeelden && req.body.website && req.body.imageUrls) {
+            console.log("Form data is complete");
+            const formDataValidation = await aiGenerateService.validateFormData(req.body);
+            console.log("Form data validation: ", formDataValidation);
+            res.json({formDataValidation});
+        }
+        else {
+            res.status(400).json({ error: "Missing required fields for form based article" });
+            return;
         }
     }
 }; 
