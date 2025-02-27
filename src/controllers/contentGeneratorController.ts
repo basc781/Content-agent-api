@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { scraperService } from '../services/scraperService';
 import { aiGenerateService } from '../services/aiGenerateService';
-import { uploadToDatabaseService } from '../services/uploadToDatabaseService';
+import { databaseService } from '../services/databaseService';
 
 export const contentGeneratorController = {
     generateContentCalender: async (req: Request, res: Response): Promise<void> => {
@@ -33,7 +33,7 @@ export const contentGeneratorController = {
             // Check if body has everything for form based article
             else if (req.body.titel && req.body.event && req.body.beschrijving && req.body.potentialKeywords && req.body.datum && req.body.winkelvoorbeelden && req.body.website && req.body.imageUrls) {
                 console.log("Making article from input form");
-                const contentCalendar = await uploadToDatabaseService.createContentCalendar(req.body);
+                const contentCalendar = await databaseService.createContentCalendar(req.body);
                 req.body.contentId = contentCalendar.id;
                 console.log("Content calendar created with id: ", req.body.contentId);
             }
@@ -43,7 +43,7 @@ export const contentGeneratorController = {
             }
 
             const availableStores = await scraperService.companyContext(req.body.website);
-
+            console.log("Starting filter process with available stores: ", availableStores);
             const filteredStoreList = await aiGenerateService.generateStoreList(req.body.contentId, JSON.stringify(availableStores));
             console.log("Filtered store list: ", filteredStoreList);
 
@@ -77,6 +77,29 @@ export const contentGeneratorController = {
         else {
             res.status(400).json({ error: "Missing required fields for form based article" });
             return;
+        }
+    }
+}
+
+export const contentRetrieverController = {
+    getPublishedArticles: async (_req: Request, res: Response): Promise<void> => {
+        try {
+            console.log("Getting published articles");
+            const publishedArticles = await databaseService.getPublishedArticles();
+            res.json({ publishedArticles });
+        } catch (error) {
+            console.error('Error retrieving published articles:', error);
+            res.status(500).json({ error: "Failed to retrieve published articles" });
+        }
+    },
+    getPublishedContentCalendarItems: async (_req: Request, res: Response): Promise<void> => {
+        try {
+            console.log("Getting published content calendar items");
+            const publishedContentCalendarItems = await databaseService.getPublishedContentCalendarItems();
+            res.json({ publishedContentCalendarItems });
+        } catch (error) {
+            console.error('Error retrieving published content calendar items:', error);
+            res.status(500).json({ error: "Failed to retrieve published content calendar items" });
         }
     }
 }; 

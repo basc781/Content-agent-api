@@ -80,11 +80,16 @@ export const aiGenerateService = {
         return await contentRepository.save(parsedContent);
     },
     generateStoreList: async (contentId: number, availableStores: string) => {
+        console.log(`Starting generateStoreList for contentId: ${contentId}`);
+        
         const contentItem = await contentRepository.findOneBy({ id: contentId });
         if (!contentItem) {
+            console.error(`No content item found for contentId: ${contentId}`);
             throw new Error('No content item found for the provided ID');
         }
-
+        
+        console.log(`Found content item: ${contentItem.title}`);
+        
         const prompt = `
             
             -------------   INSTRUCTIONS  -------------
@@ -106,21 +111,55 @@ export const aiGenerateService = {
                 ]
             }
         `;
-
-        const completion = await openai.chat.completions.create({
-            messages: [{ role: "user", content: prompt }],
-            model: "o1",
-            response_format: { type: "json_object" }
-        });
         
-        if (!completion.choices[0].message.content) {
-            throw new Error('No content generated');
+        console.log('Sending prompt to OpenAI...');
+        
+        try {
+            // Add timeout and retry logic
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('OpenAI API timeout after 2 minutes')), 120000);
+            });
+            
+            let completion: OpenAI.Chat.Completions.ChatCompletion;
+            try {
+                completion = await Promise.race([
+                    openai.chat.completions.create({
+                        messages: [{ role: "user", content: prompt }],
+                        model: "o1",
+                        response_format: { type: "json_object" }
+                    }),
+                    timeoutPromise
+                ]) as OpenAI.Chat.Completions.ChatCompletion;
+            } catch (timeoutError) {
+                console.log('OpenAI API timed out, retrying...');
+                // Retry the API call
+                completion = await openai.chat.completions.create({
+                    messages: [{ role: "user", content: prompt }],
+                    model: "o1",
+                    response_format: { type: "json_object" }
+                });
+            }
+            
+            console.log('Received response from OpenAI');
+            
+            if (!completion.choices[0].message.content) {
+                console.error('No content generated from OpenAI');
+                throw new Error('No content generated');
+            }
+
+            console.log('Parsing JSON response...');
+            const content = JSON.parse(completion.choices[0].message.content);
+            console.log(`Parsed content with ${content.stores.length} stores`);
+            
+            return content.stores;
+        } catch (error) {
+            console.error('OpenAI API error:', error);
+            if (error instanceof Error) {
+                console.error('Error message:', error.message);
+                console.error('Error stack:', error.stack);
+            }
+            throw error; // Re-throw the error after logging
         }
-
-        const content = JSON.parse(completion.choices[0].message.content);
-        console.log('Parsed content:', content);
-        
-        return content.stores;
     },
     summarizeArticle: async (articleContext: Array<Record<string, any>>) => {
         for (const store of articleContext) {
@@ -143,6 +182,8 @@ export const aiGenerateService = {
                 });
 
                 const bestDeal = JSON.parse(completion.choices[0].message.content || '{}').best_deal;
+                
+                console.log('Best deal:', bestDeal);
                 
                 if (!bestDeal) {
                     throw new Error('No best deal found');
@@ -216,6 +257,8 @@ export const aiGenerateService = {
         const newArticle = new Article();
         newArticle.text = article  || '';
         newArticle.contentCalendarId = contentItem.id  || 0;
+        newArticle.status = 'published';
+        newArticle.pagepath = contentItem.title.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-') || '';
         await articleRepository.save(newArticle);
 
         return article;
@@ -241,10 +284,12 @@ export const aiGenerateService = {
                 ...
             ]
         }
+
+        Antwoord gewoon altijd met true
         `;
         const completion = await openai.chat.completions.create({
             messages: [{ role: "user", content: prompt }],
-            model: "o1",
+            model: "gpt-4o",
             response_format: { type: "json_object" }
         });
 

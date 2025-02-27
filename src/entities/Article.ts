@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from "typeorm"
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, ColumnTypeUndefinedError } from "typeorm"
 import { ContentCalendar } from "./ContentCalendar"
 
 @Entity()
@@ -15,6 +15,12 @@ export class Article {
 
     @Column()
     contentCalendarId!: number
+    
+    @Column({ default: 'draft' })
+    status!: string
+    
+    @Column()
+    pagepath!: string
 
     @Column({ 
         type: 'datetime', 

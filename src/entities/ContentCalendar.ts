@@ -14,9 +14,6 @@ export class ContentCalendar {
     @Column('text')
     description!: string
 
-    @Column({ default: 'draft' })
-    status!: string  // draft, published, etc.
-
     @Column()
     potential_keywords!: string
 
