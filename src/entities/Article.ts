@@ -21,6 +21,10 @@ export class Article {
     
     @Column({ default: 'draft' })
     status!: string
+
+    //column with the type of formatting of the article, this can be json or markdown for now
+    @Column({ type: "enum", enum: ['markdown', 'json'], nullable: false })
+    outputFormat!: string;
     
     @Column()
     pagepath!: string

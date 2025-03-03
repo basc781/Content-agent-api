@@ -1,6 +1,7 @@
 import { AppDataSource } from "../data-source";
 import { ContentCalendar } from "../entities/ContentCalendar";
 import { Article } from "../entities/Article";
+import { UserPreference } from '../entities/UserPreference';
 // import { ArticleFormData } from "../types/types";
 
 export const databaseService = {
@@ -44,5 +45,14 @@ export const databaseService = {
         });
         
         return contentItems;
+    },
+    getUserPreferences: async (userId: string): Promise<UserPreference | null> => {
+        const userPreferenceRepository = AppDataSource.getRepository(UserPreference);
+        
+        const userPreference = await userPreferenceRepository.findOne({
+            where: { userId }
+        });
+        
+        return userPreference;
     }
 }; 

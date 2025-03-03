@@ -1,41 +1,41 @@
 import { Request, Response } from 'express';
-import { scraperService } from '../services/scraperService';
 import { aiGenerateService } from '../services/aiGenerateService';
 import { databaseService } from '../services/databaseService';
+import { contentPipelineService } from '../services/contentPipelineService';
+import { ArticleGenerationRequest } from '../types/types';
     
 export const contentGeneratorController = {
     // Generate an article based on the content calendar or form data
     generateArticle: async (req: Request, res: Response): Promise<void> => {
         try {
-            // Check if body has everything for form based article
-            if (req.body.userId && req.body.formData && req.body.website && req.body.imageUrls && req.body.titel && req.body.tools) {
-                console.log("Making article from input form");
-                const contentCalendar = await databaseService.createContentCalendar(req.body.formData, req.body.userId, req.body.titel);
-                req.body.contentId = contentCalendar.id;
-                console.log("Content calendar created with id: ", req.body.contentId);
-            }
-            else {
-                res.status(400).json({ error: "Missing required fields for either content calendar or form based article" });
+            const request = req.body as ArticleGenerationRequest;
+            
+            // Validate request
+            if (!request.userId || !request.formData) {
+                res.status(400).json({ error: "Missing required fields: userId or formData" });
                 return;
             }
-
-            const availableStores = await scraperService.companyContext(req.body.website);
-            console.log("Starting filter process with available stores: ", availableStores);
-            const filteredStoreList = await aiGenerateService.generateStoreList(req.body.formData.contentId, JSON.stringify(availableStores));
-            console.log("Filtered store list: ", filteredStoreList);
-
-            // Get article context by scraping all filtered stores
-            const articleContext = await scraperService.articleContext(filteredStoreList);
-            console.log("Article context: ", articleContext);
             
-            const summarisedAritcleContext = await aiGenerateService.summarizeArticle(articleContext as any, req.body.formData);
-            console.log("Summarised article context: ", summarisedAritcleContext);
+            console.log("Making article from input form");
             
-
-            const article = await aiGenerateService.generateArticle(summarisedAritcleContext, req.body.contentId, req.body.imageUrls, req.body.userId);
-            console.log("Article: ", article);
-
-            res.json({article: article});
+            // Create content calendar
+            const contentCalendar = await databaseService.createContentCalendar(
+                request.formData, 
+                request.userId, 
+                request.formData.titel
+            );
+            console.log("Content calendar created with id: ", contentCalendar.id);
+            
+            // Run the content generation pipeline
+            const article = await contentPipelineService.generateArticleContent(
+                request.userId,
+                request.formData,
+                request.website || '',
+                contentCalendar.id,
+                request.formData.imageUrls || []
+            );
+            
+            res.json({ article });
         } 
         catch (error) {
             console.error('Article generation error:', error);

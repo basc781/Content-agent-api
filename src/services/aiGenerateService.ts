@@ -203,8 +203,18 @@ export const aiGenerateService = {
         
         return articleContext;
     },
-    generateArticle: async (summarisedAritcleContext: Array<Record<string, any>>, contentId: number, imageUrls: Array<string>, userId: string) => {
-        console.log('Input context:', summarisedAritcleContext);
+    generateArticle: async (articleContext: Array<Record<string, any>> | any, contentId: number, imageUrls: Array<string>, userId: string, userTools: any) => {
+        console.log('Input context size:', JSON.stringify(articleContext).length);
+        console.log('Input context type:', typeof articleContext);
+
+        // Add null check before using Object.keys
+        console.log('Input context structure:', articleContext ? Object.keys(articleContext) : 'No context available');
+        
+        // Add a timer that waits 10 seconds to continue
+        await new Promise(resolve => setTimeout(resolve, 10000));
+        console.log('Waiting almost done');
+        await new Promise(resolve => setTimeout(resolve, 20000));
+        
         const userPreference = await userPreferenceRepository.findOneBy({ userId: userId });
         if (!userPreference) {
             throw new Error('No user preference found for the provided ID');
@@ -219,18 +229,50 @@ export const aiGenerateService = {
         }
         console.log('Content item:', contentItem);
 
-        // Create a string of alternating URLs and summaries
-        const contextString = summarisedAritcleContext.map(store => {
-            const [storeName, data] = Object.entries(store)[0];
-            console.log('Processing store data:', data);
-            return `${storeName}\n${data.url}\n${data.summary}`;  // Access summary directly as it's a string
-        }).join('\n\n');
+        // Filter only essential data if websiteScraping is enabled
+        const contextForPrompt = userTools.websiteScraping && Array.isArray(articleContext) && articleContext
+            ? articleContext.map(store => {
+                const [storeName, data] = Object.entries(store)[0];
+                return {
+                    store: storeName,
+                    summary: (data as { summary?: string }).summary || 'No summary available',
+                    url: (data as { url?: string }).url || 'No url available'
+                };
+            })
+            : (articleContext || { basicInfo: 'No context available' }); // Fallback if articleContext is null/undefined
 
         console.log('Generated context item AKJSNDJANJKDNJKASNKJDNJKASNJKDNKJASNDKsandjknaskjndjksanbjkdnaskjbdkjbasjkdbkjasbdjksabk asjkbdjksabkjdbkjasdbkjasbdkj\J', JSON.stringify(contentItem));
 
+        // Parse user tools to determine output format
+        let outputFormat = "markdown"; // Default format
+        if (userPreference.tools) {
+            try {
+                let toolsData;
+                if (typeof userPreference.tools === 'string') {
+                    toolsData = JSON.parse(userPreference.tools);
+                } else {
+                    toolsData = userPreference.tools;
+                }
+                
+                const userTools = toolsData.userTools || {};
+                
+                // Check which output format is enabled
+                if (userTools.jsonOutput === true) {
+                    outputFormat = "json";
+                } else if (userTools.markdownOutput === true) {
+                    outputFormat = "markdown";
+                }
+                
+                console.log(`Using output format: ${outputFormat}`);
+            } catch (error) {
+                console.error("Error parsing tools:", error);
+                // Continue with default format
+            }
+        }
+
         const prompt = `
         ------- Onderwerp van het artikel ---------
-        ${contentItem.title} Door acties.nl
+        ${contentItem.title} 
         ${JSON.stringify(contentItem.formData)}
 
         ----- Begin schrijfregels -----
@@ -238,16 +280,18 @@ export const aiGenerateService = {
         
         ----Einde schrijfregels -----
         
-        Belangrijk is dat je ALTIJD in markdown reageert. Zet ook lekker veel backlinks in van de relevante pagina's die je hieronder meekrijgt.
+        Belangrijk is dat je ALTIJD in ${outputFormat} format reageerd.
+         
         
         ---- Assets die je kunt gebruiken -----
         Voeg deze toe aan relevante plekken in het artikel. Probeer ze tussen de subkoppen door te plaatsen:
         ${JSON.stringify(imageUrls)}
+        Als er geen assets zijn, hoef je ze niet te gebruiken.
 
 
 
-        ---- Context ---------        
-        ${contextString}
+        ---- extra Context ---------        
+        ${JSON.stringify(contextForPrompt)}
         `
 
         console.log('DIT IS DE Prompt LUL:', prompt);
@@ -266,6 +310,7 @@ export const aiGenerateService = {
         newArticle.status = 'published';
         newArticle.pagepath = contentItem.title.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-') + contentItem.id.toString() || '';
         newArticle.userId = userId;
+        newArticle.outputFormat = outputFormat;
         await articleRepository.save(newArticle);
 
         

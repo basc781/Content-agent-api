@@ -5,6 +5,7 @@ export interface ArticleFormData {
     potentialKeywords: string;
     datum: string;
     winkelvoorbeelden: string;
+    imageUrls?: string[];
 }
 
 export interface form_check_input {
@@ -14,6 +15,6 @@ export interface form_check_input {
 
 export interface ArticleGenerationRequest {
     userId: string;
-    formData: string;
-    website: string;
+    formData: ArticleFormData;
+    website?: string;
 } 
