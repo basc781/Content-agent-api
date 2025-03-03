@@ -1,20 +1,17 @@
 import { AppDataSource } from "../data-source";
 import { ContentCalendar } from "../entities/ContentCalendar";
 import { Article } from "../entities/Article";
-import { ArticleFormData } from "../types/article";
+// import { ArticleFormData } from "../types/types";
 
 export const databaseService = {
-    createContentCalendar: async (formData: ArticleFormData): Promise<ContentCalendar> => {
+    createContentCalendar: async (formData: any, userId: string, titel: string): Promise<ContentCalendar> => {
         const contentCalendarRepository = AppDataSource.getRepository(ContentCalendar);
         
         const contentCalendar = contentCalendarRepository.create({
-            title: formData.titel,
-            event: formData.event,
-            description: formData.beschrijving,
-            potential_keywords: formData.potentialKeywords,
-            search_potential: "medium", // default value
-            winkel_voorbeelden: formData.winkelvoorbeelden,
-            date: formData.datum,
+            title: titel,
+            userId: userId,
+            formData: formData,
+            status: "Writing...."
         });
 
         await contentCalendarRepository.save(contentCalendar);
@@ -32,27 +29,20 @@ export const databaseService = {
 
         return articles;
     },
-    getPublishedContentCalendarItems: async (): Promise<Article[]> => {
-        const articleRepository = AppDataSource.getRepository(Article);
-        const articles = await articleRepository.find({ 
-            where: { status: "published" },
+    getPublishedContentCalendarItems: async (userId: string): Promise<ContentCalendar[]> => {
+        const contentCalendarRepository = AppDataSource.getRepository(ContentCalendar);
+        
+        // Simple approach without complex selects
+        const contentItems = await contentCalendarRepository.find({
+            where: [
+                { status: "Writing....", userId: userId },
+                { status: "published", userId: userId }
+            ],
             relations: {
-                contentCalendar: true
-            },
-            select: {
-                id: true,
-                text: true,
-                status: true,
-                createdAt: true,
-                pagepath: true,
-                contentCalendar: {
-                    id: true,
-                    title: true,
-                    event: true,
-                    date: true
-                }
+                articles: true
             }
         });
-        return articles;
+        
+        return contentItems;
     }
 }; 

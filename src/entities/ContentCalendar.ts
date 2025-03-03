@@ -1,29 +1,35 @@
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm"
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm"
+import { Article } from "./Article"
 
 @Entity()
 export class ContentCalendar {
     @PrimaryGeneratedColumn()
     id!: number
 
+    @Column("varchar", { nullable: false })
+    userId!: string;
+
     @Column()
     title!: string
 
+    @Column('json')
+    formData!: JSON
+    
     @Column()
-    event!: string  // e.g., "Valentine's Day", "Black Friday"
+    status!: string
+    @Column({ 
+        type: 'datetime',
+        default: () => 'CURRENT_TIMESTAMP'
+    })
+    dateCreated!: Date
 
-    @Column('text')
-    description!: string
+    @Column({ 
+        type: 'datetime',
+        default: () => 'CURRENT_TIMESTAMP',
+        onUpdate: 'CURRENT_TIMESTAMP'
+    })
+    dateLastUpdated!: Date
 
-    @Column()
-    potential_keywords!: string
-
-    @Column()
-    search_potential!: string
-
-    @Column()
-    winkel_voorbeelden!: string
-
-    @Column()
-    date!: string
-
+    @OneToMany(() => Article, article => article.contentCalendar)
+    articles!: Article[]
 }

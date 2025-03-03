@@ -6,10 +6,13 @@ export class Article {
     @PrimaryGeneratedColumn()
     id!: number
 
+    @Column("varchar", { nullable: false })
+    userId!: string;
+
     @Column('text')
     text!: string
 
-    @ManyToOne(() => ContentCalendar)
+    @ManyToOne(() => ContentCalendar, contentCalendar => contentCalendar.articles)
     @JoinColumn({ name: "contentCalendarId" })
     contentCalendar!: ContentCalendar
 

@@ -3,6 +3,7 @@ import { ContentCalendar } from '../entities/ContentCalendar';
 import { Article } from '../entities/Article';
 import { AppDataSource } from '../data-source';
 import fs from 'fs';
+import { UserPreference } from '../entities/UserPreference';
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY
@@ -10,7 +11,7 @@ const openai = new OpenAI({
 
 const contentRepository = AppDataSource.getRepository(ContentCalendar);
 const articleRepository = AppDataSource.getRepository(Article);
-
+const userPreferenceRepository = AppDataSource.getRepository(UserPreference);
 export const aiGenerateService = {
     
     // Generate a content calender for a company of which you have all necessary information. The calender structure is 
@@ -161,7 +162,7 @@ export const aiGenerateService = {
             throw error; // Re-throw the error after logging
         }
     },
-    summarizeArticle: async (articleContext: Array<Record<string, any>>) => {
+    summarizeArticle: async (articleContext: Array<Record<string, any>>, formData: string) => {
         for (const store of articleContext) {
             const [storeName, data] = Object.entries(store)[0];
             try {
@@ -174,7 +175,7 @@ export const aiGenerateService = {
                     messages: [
                         { 
                             role: "user", 
-                            content: `${JSON.stringify(parsedContent)}\n\n${prompt} kan je deze in een json format teruggeven` 
+                            content: `${JSON.stringify(parsedContent)}\n\n${prompt} kan je deze in een json format teruggeven. Hieronder vind je de context van waar het artikel over gaat: ${JSON.stringify(formData)}` 
                         }
                     ],
                     model: "gpt-4o",
@@ -202,9 +203,16 @@ export const aiGenerateService = {
         
         return articleContext;
     },
-    generateArticle: async (summarisedAritcleContext: Array<Record<string, any>>, contentId: number, imageUrls: Array<string>) => {
+    generateArticle: async (summarisedAritcleContext: Array<Record<string, any>>, contentId: number, imageUrls: Array<string>, userId: string) => {
         console.log('Input context:', summarisedAritcleContext);
-        
+        const userPreference = await userPreferenceRepository.findOneBy({ userId: userId });
+        if (!userPreference) {
+            throw new Error('No user preference found for the provided ID');
+        }
+        if (!userPreference.generateContentPrompt) {
+            throw new Error('No generateContentPrompt found for the provided ID');
+        }
+
         const contentItem = await contentRepository.findOneBy({ id: contentId });
         if (!contentItem) {
             throw new Error('No content item found for the provided ID');
@@ -223,12 +231,10 @@ export const aiGenerateService = {
         const prompt = `
         ------- Onderwerp van het artikel ---------
         ${contentItem.title} Door acties.nl
-        ${contentItem.description}
-        ${contentItem.event}
-        ${contentItem.date}
+        ${JSON.stringify(contentItem.formData)}
 
         ----- Begin schrijfregels -----
-        Je bent een expert SEO schrijver en gaat een artikel voor mij schrijven met de volgende regels: ${fs.readFileSync('./src/prompts/prompt_generateArticle.txt', 'utf8')}
+        Je bent een expert SEO schrijver en gaat een artikel voor mij schrijven met de volgende regels: ${JSON.stringify(userPreference.generateContentPrompt)}
         
         ----Einde schrijfregels -----
         
@@ -258,15 +264,40 @@ export const aiGenerateService = {
         newArticle.text = article  || '';
         newArticle.contentCalendarId = contentItem.id  || 0;
         newArticle.status = 'published';
-        newArticle.pagepath = contentItem.title.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-') || '';
+        newArticle.pagepath = contentItem.title.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-') + contentItem.id.toString() || '';
+        newArticle.userId = userId;
         await articleRepository.save(newArticle);
 
+        
+        contentItem.status = 'published';
+        await contentRepository.save(contentItem);
+
         return article;
+
+        
     },
-    validateFormData: async (formData: any) => {
-        const prompt = `
+    validateFormData: async (formData: any, userId: string) => {
+        
+        const userPreference = await userPreferenceRepository.findOneBy({ userId: userId });
+        if (!userPreference) {
+            throw new Error('No user preference found for the provided ID');
+        }
+
+        const promptTijdelijk = `
+        antwoord met json:
+        {
+            "valid": true,
+            "feedback": [
+                "feedback1",
+                "feedback2" 
+            ]
+        }
+        `
+
+        const prompt = `        
+
         Aan jou de taak om te gaan valideren of de form data correct is. Dit ga je doen op basis van de volgende regels:
-        ${fs.readFileSync('./src/prompts/prompt_checkFormData.txt', 'utf8')}
+        ${JSON.stringify(userPreference.checkFormDataPrompt)}
         
         -------------- EIND REGELS EN BEGIN FORM DATA --------------
 
@@ -285,10 +316,10 @@ export const aiGenerateService = {
             ]
         }
 
-        Antwoord gewoon altijd met true
+
         `;
         const completion = await openai.chat.completions.create({
-            messages: [{ role: "user", content: prompt }],
+            messages: [{ role: "user", content: promptTijdelijk }],
             model: "gpt-4o",
             response_format: { type: "json_object" }
         });
