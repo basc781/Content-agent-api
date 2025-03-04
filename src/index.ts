@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 dotenv.config();
-
+//new node version
 import express, { Express } from 'express';
 import cors from 'cors';
 import { routes } from './routes';
