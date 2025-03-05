@@ -12,7 +12,7 @@ const port = 3000;
 // Update the specific CORS settings
 app.use(cors({
     origin: ['http://localhost:5173', 'https://content-agent.nl'],  // Remove trailing slashes
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    methods: ['OPTIONS', 'GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
