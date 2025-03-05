@@ -328,17 +328,6 @@ export const aiGenerateService = {
             throw new Error('No user preference found for the provided ID');
         }
 
-        const promptTijdelijk = `
-        antwoord met json:
-        {
-            "valid": true,
-            "feedback": [
-                "feedback1",
-                "feedback2" 
-            ]
-        }
-        `
-
         const prompt = `        
 
         Aan jou de taak om te gaan valideren of de form data correct is. Dit ga je doen op basis van de volgende regels:
@@ -364,7 +353,7 @@ export const aiGenerateService = {
 
         `;
         const completion = await openai.chat.completions.create({
-            messages: [{ role: "user", content: promptTijdelijk }],
+            messages: [{ role: "user", content: prompt }],
             model: "gpt-4o",
             response_format: { type: "json_object" }
         });
