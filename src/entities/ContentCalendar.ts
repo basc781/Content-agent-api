@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm"
-import { Article } from "./Article"
+import { Article } from "./Article.js"
 
 @Entity()
 export class ContentCalendar {

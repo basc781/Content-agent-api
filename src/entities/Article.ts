@@ -1,5 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, ColumnTypeUndefinedError } from "typeorm"
-import { ContentCalendar } from "./ContentCalendar"
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from "typeorm"
+import { ContentCalendar } from "./ContentCalendar.js" 
 
 @Entity()
 export class Article {
