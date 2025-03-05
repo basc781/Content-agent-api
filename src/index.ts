@@ -14,7 +14,6 @@ app.use(cors({
     origin: ['http://localhost:5173', 'https://content-agent.nl'],  // Remove trailing slashes
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true  // Add this if you're using cookies/auth
 }));
 
 console.log(process.env.DB_HOST)
