@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { aiGenerateService } from '../services/aiGenerateService';
-import { databaseService } from '../services/databaseService';
-import { contentPipelineService } from '../services/contentPipelineService';
-import { ArticleGenerationRequest } from '../types/types';
+import { aiGenerateService } from '../services/aiGenerateService.js';
+import { databaseService } from '../services/databaseService.js';
+import { contentPipelineService } from '../services/contentPipelineService.js';
+import { ArticleGenerationRequest } from '../types/types.js';
     
 export const contentGeneratorController = {
     // Generate an article based on the content calendar or form data

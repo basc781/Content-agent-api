@@ -1,9 +1,9 @@
 import OpenAI from 'openai';
-import { ContentCalendar } from '../entities/ContentCalendar';
-import { Article } from '../entities/Article';
-import { AppDataSource } from '../data-source';
+import { ContentCalendar } from '../entities/ContentCalendar.js';
+import { Article } from '../entities/Article.js';
+import { AppDataSource } from '../data-source.js';
 import fs from 'fs';
-import { UserPreference } from '../entities/UserPreference';
+import { UserPreference } from '../entities/UserPreference.js';
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY

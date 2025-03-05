@@ -1,7 +1,7 @@
-import { AppDataSource } from "../data-source";
-import { ContentCalendar } from "../entities/ContentCalendar";
-import { Article } from "../entities/Article";
-import { UserPreference } from '../entities/UserPreference';
+import { AppDataSource } from "../data-source.js";
+import { ContentCalendar } from "../entities/ContentCalendar.js";
+import { Article } from "../entities/Article.js";
+import { UserPreference } from '../entities/UserPreference.js';
 // import { ArticleFormData } from "../types/types";
 
 export const databaseService = {

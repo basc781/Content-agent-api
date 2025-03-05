@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { contentGeneratorController, contentRetrieverController } from '../controllers/contentGeneratorController';
+import { contentGeneratorController, contentRetrieverController } from '../controllers/contentGeneratorController.js';
 
 export const routes = Router();
 

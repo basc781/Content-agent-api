@@ -1,6 +1,6 @@
-import { scraperService } from './scraperService';
-import { aiGenerateService } from './aiGenerateService';
-import { databaseService } from './databaseService';
+import { scraperService } from './scraperService.js';
+import { aiGenerateService } from './aiGenerateService.js';
+import { databaseService } from './databaseService.js';
 
 export const contentPipelineService = {
   /**
