@@ -9,14 +9,12 @@ import { AppDataSource } from "./data-source.js";
 const app: Express = express();
 const port = 3000;
 
-// Add CORS middleware
-app.use(cors());
-
-// For more specific settings, you can use:
+// Update the specific CORS settings
 app.use(cors({
-    origin: ['http://localhost:5173/', 'https://content-agent.nl/'],
+    origin: ['http://localhost:5173', 'https://content-agent.nl'],  // Remove trailing slashes
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true  // Add this if you're using cookies/auth
 }));
 
 console.log(process.env.DB_HOST)
