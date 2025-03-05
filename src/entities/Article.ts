@@ -12,7 +12,7 @@ export class Article {
     @Column('text')
     text!: string
 
-    @ManyToOne(() => ContentCalendar, contentCalendar => contentCalendar.articles)
+    @ManyToOne(() => ContentCalendar, contentCalendar => contentCalendar.articles, { lazy: true })
     @JoinColumn({ name: "contentCalendarId" })
     contentCalendar!: ContentCalendar
 
