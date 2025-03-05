@@ -14,7 +14,7 @@ app.use(cors());
 
 // For more specific settings, you can use:
 app.use(cors({
-    origin: ['http://localhost:5173/'],
+    origin: ['http://localhost:5173/', 'https://content-agent.nl/'],
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
