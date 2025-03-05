@@ -2,10 +2,14 @@
   "name": "actiesseoapi",
   "version": "1.0.0",
   "main": "index.js",
+  
   "scripts": {
     "dev": "ts-node src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js"
+  },
+  "engines": {
+    "node": "23.5.0"
   },
   "author": "",
   "license": "ISC",
