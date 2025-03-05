@@ -9,7 +9,7 @@
     "start": "node dist/index.js"
   },
   "engines": {
-    "node": "23.5.0"
+     "node": ">=20.0.0"
   },
   "author": "",
   "license": "ISC",
