@@ -3,8 +3,8 @@ dotenv.config();
 //new node version
 import express, { Express } from 'express';
 import cors from 'cors';
-import { routes } from './routes/index';
-import { AppDataSource } from "./data-source";
+import { routes } from './routes/index.js';
+import { AppDataSource } from "./data-source.js";
 
 const app: Express = express();
 const port = 3000;
