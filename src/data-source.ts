@@ -1,5 +1,8 @@
 import "reflect-metadata"
 import { DataSource } from "typeorm"
+import { Article } from "./entities/Article.js"
+import { ContentCalendar } from "./entities/ContentCalendar.js"
+import { UserPreference } from "./entities/UserPreference.js"
 
 export const AppDataSource = new DataSource({
     type: "mysql",
@@ -10,7 +13,7 @@ export const AppDataSource = new DataSource({
     database: process.env.DB_NAME,
     synchronize: true,
     logging: false,
-    entities: ["src/entities/**/*.js"],
+    entities: [Article, ContentCalendar, UserPreference],
     migrations: [],
     subscribers: [],
 }) 
