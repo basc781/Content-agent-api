@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from "typeorm"
-import { ContentCalendar } from "./ContentCalendar.js" 
+import type { ContentCalendar } from "./ContentCalendar.js" 
+import { ContentCalendar as ContentCalendarEntity } from "./ContentCalendar.js"
 
 @Entity()
 export class Article {
@@ -12,7 +13,7 @@ export class Article {
     @Column('text')
     text!: string
 
-    @ManyToOne(() => ContentCalendar, contentCalendar => contentCalendar.articles, { lazy: true })
+    @ManyToOne(() => ContentCalendarEntity, contentCalendar => contentCalendar.articles, { lazy: true })
     @JoinColumn({ name: "contentCalendarId" })
     contentCalendar!: ContentCalendar
 
