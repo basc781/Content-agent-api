@@ -15,7 +15,11 @@ const port = 3000;
 // Update the specific CORS settings
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://content-agent.nl"], // Remove trailing slashes
+    origin: [
+      "http://localhost:5173",
+      "https://content-agent.nl",
+      "https://content-agent-beta.trezma.com/",
+    ], // Remove trailing slashes
     methods: ["OPTIONS", "GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
