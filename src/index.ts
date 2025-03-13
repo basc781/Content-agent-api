@@ -18,7 +18,7 @@ app.use(
     origin: [
       "http://localhost:5173",
       "https://content-agent.nl",
-      "https://content-agent-beta.trezma.com/",
+      "https://content-agent-beta.trezma.com",
     ], // Remove trailing slashes
     methods: ["OPTIONS", "GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
