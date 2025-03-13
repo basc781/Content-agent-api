@@ -1,9 +1,8 @@
-import { Router } from 'express';
-import { contentGeneratorController, contentRetrieverController } from '../controllers/contentGeneratorController.js';
+import { Router } from "express";
+import { contentRouter } from "./content.routes.js";
+import { moduleRouter } from "./module.routes.js";
 
 export const routes = Router();
 
-routes.post('/generate-article', contentGeneratorController.generateArticle);
-routes.post('/check-form-data', contentGeneratorController.checkFormData);
-routes.get('/get-published-articles', contentRetrieverController.getPublishedArticles);
-routes.get('/get-published-content-calendar-items', contentRetrieverController.getPublishedContentCalendarItems);   
+routes.use("/content", contentRouter);
+routes.use("/modules", moduleRouter);
