@@ -9,7 +9,7 @@ export class OrgPreference {
   checkFormDataPrompt!: string;
 
   @Column("text", { nullable: true })
-  generateContentPrompt!: string;
+  organizationPrompt!: string;
 
   @Column({
     type: "datetime",

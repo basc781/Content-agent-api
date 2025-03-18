@@ -2,9 +2,9 @@ import OpenAI from "openai";
 import { ContentCalendar } from "../entities/ContentCalendar.js";
 import { Article } from "../entities/Article.js";
 import { AppDataSource } from "../data-source.js";
-import fs from "fs";
 import { OrgPreference } from "../entities/OrgPreferences.js";
 import { Module } from "../entities/Module.js";
+import { databaseService } from "./databaseService.js";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -245,7 +245,7 @@ export const aiGenerateService = {
     if (!orgPreference) {
       throw new Error("No org preference found for the provided ID");
     }
-    if (!orgPreference.generateContentPrompt) {
+    if (!orgPreference.organizationPrompt) {
       throw new Error("No generateContentPrompt found for the provided ID");
     }
 
@@ -270,16 +270,15 @@ export const aiGenerateService = {
           })
         : articleContext || { basicInfo: "No context available" }; // Fallback if articleContext is null/undefined
 
-    console.log(
-      "Generated context item AKJSNDJANJKDNJKASNKJDNJKASNJKDNKJASNDKsandjknaskjndjksanbjkdnaskjbdkjbasjkdbkjasbdjksabk asjkbdjksabkjdbkjasdbkjasbdkjJ",
-      JSON.stringify(contentItem)
+    const orgModulePrompt = await databaseService.getPromptByModuleAndOrgId(
+      module.id,
+      orgId
     );
 
     let outputFormat = module.outputFormat || "markdown"; // Default format
 
     // Check if module has a promptTemplate, if not, fall back to the org's generateContentPrompt
-    const promptInstructions =
-      module.promptTemplate || orgPreference.generateContentPrompt;
+    const promptInstructions = module.promptTemplate;
 
     const prompt = `
         ------- Onderwerp ---------
@@ -291,24 +290,24 @@ export const aiGenerateService = {
         ${promptInstructions}
 
         ORG INSTRUCTIES:
-        ${orgPreference.generateContentPrompt}
+        ${orgPreference.organizationPrompt}
+
+        MODULE + ORG INSTRUCTIES:
+        ${orgModulePrompt}
         
-        ----Einde instructies -----
+        ----- Einde instructies -----
         
         Belangrijk is dat je ALTIJD in ${outputFormat} format reageerd. Voeg nooit de '''markdown''' tags toe.
-         
         
-        ---- Assets die je kunt gebruiken -----
+        ----- Assets die je kunt gebruiken -----
         Voeg deze toe aan relevante plekken in het artikel. Probeer ze tussen de subkoppen door te plaatsen:
         ${JSON.stringify(imageUrls)}
         Als er geen assets zijn, hoef je ze niet te gebruiken.
 
-
-
-        ---- extra Context ---------        
+        ----- Extra Context -----        
         ${JSON.stringify(contextForPrompt)}
 
-        ---- Module Purpose ---------
+        ----- Module Purpose -----
         ${module.purpose || "Genereer een SEO-vriendelijk artikel"}
         `;
 

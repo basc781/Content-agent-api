@@ -3,6 +3,7 @@ import { ContentCalendar } from "../entities/ContentCalendar.js";
 import { Article } from "../entities/Article.js";
 import { OrgPreference } from "../entities/OrgPreferences.js";
 import { Module } from "../entities/Module.js";
+import { OrgModuleAccess } from "../entities/OrgModuleAccess.js";
 
 export const databaseService = {
   createContentCalendar: async (
@@ -93,6 +94,22 @@ export const databaseService = {
       .getOne();
 
     return module;
+  },
+
+  getPromptByModuleAndOrgId: async (
+    moduleId: number,
+    orgId: string
+  ): Promise<string | null> => {
+    const promptRepository = AppDataSource.getRepository(OrgModuleAccess);
+
+    const prompt = await promptRepository.findOne({
+      where: {
+        moduleId,
+        orgId,
+      },
+    });
+
+    return prompt?.prompt ?? null;
   },
 
   getArticleBySlug: async (

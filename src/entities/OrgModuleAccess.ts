@@ -1,4 +1,4 @@
-import { Entity, PrimaryColumn, ManyToOne, JoinColumn } from "typeorm";
+import { Entity, PrimaryColumn, ManyToOne, JoinColumn, Column } from "typeorm";
 import { OrgPreference } from "./OrgPreferences.js";
 import { Module } from "./Module.js";
 
@@ -9,6 +9,9 @@ export class OrgModuleAccess {
 
   @PrimaryColumn("int")
   moduleId!: number;
+
+  @Column("text", { nullable: true })
+  prompt!: string;
 
   @ManyToOne(() => OrgPreference, { onDelete: "CASCADE" })
   @JoinColumn({ name: "orgId", referencedColumnName: "orgId" })
