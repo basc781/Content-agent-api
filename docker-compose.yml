@@ -1,0 +1,26 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: content_agent_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: fiur0e9gih3kvo9w34hj9vw
+      MYSQL_PASSWORD: fiur0e9gih3kvo9w34hj9vw
+      MYSQL_DATABASE: content_agent
+      MYSQL_USER: content_agent
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mysql_data:
+    driver: local

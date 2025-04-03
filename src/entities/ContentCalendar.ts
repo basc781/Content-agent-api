@@ -1,35 +1,51 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm"
-import { Article } from "./Article.js"
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  ManyToOne,
+  JoinColumn,
+} from "typeorm";
+import { Article } from "./Article.js";
+import { Module } from "./Module.js";
 
 @Entity()
 export class ContentCalendar {
-    @PrimaryGeneratedColumn()
-    id!: number
+  @PrimaryGeneratedColumn()
+  id!: number;
 
-    @Column("varchar", { nullable: false })
-    userId!: string;
+  @Column("varchar", { nullable: false })
+  orgId!: string;
 
-    @Column()
-    title!: string
+  @Column()
+  title!: string;
 
-    @Column('json')
-    formData!: JSON
-    
-    @Column()
-    status!: string
-    @Column({ 
-        type: 'datetime',
-        default: () => 'CURRENT_TIMESTAMP'
-    })
-    dateCreated!: Date
+  @Column("json")
+  formData!: JSON;
 
-    @Column({ 
-        type: 'datetime',
-        default: () => 'CURRENT_TIMESTAMP',
-        onUpdate: 'CURRENT_TIMESTAMP'
-    })
-    dateLastUpdated!: Date
+  @Column()
+  status!: string;
 
-    @OneToMany(() => Article, article => article.contentCalendar)
-    articles!: Article[]
+  @ManyToOne(() => Module, { lazy: true, onDelete: "SET NULL" })
+  @JoinColumn({ name: "moduleId" })
+  module!: Module;
+
+  @Column({ nullable: true })
+  moduleId!: number;
+
+  @Column({
+    type: "datetime",
+    default: () => "CURRENT_TIMESTAMP",
+  })
+  dateCreated!: Date;
+
+  @Column({
+    type: "datetime",
+    default: () => "CURRENT_TIMESTAMP",
+    onUpdate: "CURRENT_TIMESTAMP",
+  })
+  dateLastUpdated!: Date;
+
+  @OneToMany(() => Article, (article) => article.contentCalendar)
+  articles!: Article[];
 }
