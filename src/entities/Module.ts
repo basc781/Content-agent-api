@@ -1,4 +1,5 @@
-import { Entity, Column, PrimaryGeneratedColumn } from "typeorm";
+import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from "typeorm";
+import type { OrgModuleAccess } from "./OrgModuleAccess.js";
 
 @Entity("module")
 export class Module {
@@ -34,6 +35,9 @@ export class Module {
   
   @Column("text", { nullable: true })
   promptTemplate!: string;
+
+  @OneToMany("OrgModuleAccess", (access: OrgModuleAccess) => access.module)
+  orgModuleAccess!: OrgModuleAccess[];
 
   @Column({
     type: "datetime",

@@ -30,11 +30,15 @@ export const moduleService = {
 
       const module = await moduleRepository
         .createQueryBuilder("module")
-        .innerJoin("org_module_access", "access", "access.moduleId = module.id")
+        .leftJoinAndSelect("module.orgModuleAccess", "access")
+        .leftJoinAndSelect("access.formSchema", "formSchema")
         .where("access.orgId = :orgId", { orgId })
         .andWhere("module.slug = :moduleSlug", { moduleSlug })
         .getOne();
 
+      // Debug logging
+      console.log("Full query result:", JSON.stringify(module, null, 2));
+      
       return module;
     } catch (error) {
       console.error("Error getting module by slug:", error);
