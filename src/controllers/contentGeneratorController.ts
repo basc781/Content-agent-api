@@ -45,12 +45,18 @@ export const contentGeneratorController = {
       );
 
       // Run the content generation pipeline
+      console.log("These are the images that are being used: ", request.imageUrls);
+      console.log("This is the orgId: ", orgId);
+      console.log("This is the module: ", module);
+      console.log("This is the contentCalendar: ", contentCalendar);
+      console.log("This is the request: ", request);
+
       const article = await contentPipelineService.generateArticleContent(
         orgId,
         request.formData,
         request.website || "",
         contentCalendar.id,
-        request.formData.imageUrls || [],
+        request.imageUrls || [],
         module
       );
 

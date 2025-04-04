@@ -5,7 +5,6 @@ export interface ArticleFormData {
   potentialKeywords: string;
   datum: string;
   winkelvoorbeelden: string;
-  imageUrls?: string[];
 }
 
 export interface form_check_input {
@@ -18,4 +17,23 @@ export interface ArticleGenerationRequest {
   formData: ArticleFormData;
   website?: string;
   moduleId?: number;
+  imageUrls?: string[];
+}
+
+// Basic field definition
+export interface FormField {
+  id:  string;
+  type: 'text' | 'textarea' | 'select' | 'date' | 'checkbox' | 'radio';
+  label: string;
+  placeholder?: string;
+  required?: boolean;
+  options?: Array<{ label: string; value: string }>;  // For select, checkbox, radio
+}
+
+// Form schema definition
+export interface FormSchema {
+  title?: string;
+  description?: string;
+  fields: FormField[];
+  submitLabel?: string;
 }
