@@ -6,6 +6,21 @@ import { ArticleGenerationRequest } from "../types/types.js";
 import { getAuth } from "@clerk/express";
 
 export const contentGeneratorController = {
+
+  deleteCalendarItem: async (req: Request, res: Response): Promise<void> => {
+
+    console.log("Deleting calendar item");
+    const id = parseInt(req.params.id);
+    
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid ID format" });
+      return;
+    }
+
+    await databaseService.deleteContentCalendar(id);
+    res.json({ message: "Calendar item deleted successfully" });
+  },
+
   // Generate an article based on the content calendar or form data
   generateArticle: async (req: Request, res: Response): Promise<void> => {
     try {
@@ -124,8 +139,11 @@ export const contentRetrieverController = {
         return;
       }
 
+      await databaseService.updateContentCalendarStatus();
+
       const publishedContentCalendarItems =
         await databaseService.getPublishedContentCalendarItems(orgId, moduleId);
+
       res.json({ publishedContentCalendarItems });
     } catch (error) {
       console.error(

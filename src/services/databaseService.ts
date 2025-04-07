@@ -6,6 +6,55 @@ import { Module } from "../entities/Module.js";
 import { OrgModuleAccess } from "../entities/OrgModuleAccess.js";
 
 export const databaseService = {
+
+  deleteContentCalendar: async (id: number) => {
+    const contentCalendarRepository = AppDataSource.getRepository(ContentCalendar);
+    await contentCalendarRepository.delete(id);
+    const articleRepository = AppDataSource.getRepository(Article);
+    await articleRepository.delete({ contentCalendarId: id });
+  },
+
+  updateContentCalendarStatus: async () => {
+    const contentCalendarRepository = AppDataSource.getRepository(ContentCalendar);
+    const articleRepository = AppDataSource.getRepository(Article);
+
+    // Get content calendars that are in "Writing...." status
+    const contentCalendars = await contentCalendarRepository.find({
+      where: { status: "Writing...." },
+      relations: {
+        articles: true,
+      },
+    });
+
+    // Calculate the timestamp for 30 minutes ago
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+
+    // Filter and update content calendars older than 30 minutes
+    const failedCalendars = contentCalendars.filter(
+      (calendar) => calendar.dateCreated < thirtyMinutesAgo
+    );
+
+    if (failedCalendars.length > 0) {
+      // Update content calendars status to "Failed"
+      await contentCalendarRepository.update(
+        failedCalendars.map((calendar) => calendar.id),
+        { status: "Failed" }
+      );
+
+      // Update associated articles status to "Failed"
+      const articleIds = failedCalendars
+        .flatMap((calendar) => calendar.articles)
+        .map((article) => article.id);
+
+      if (articleIds.length > 0) {
+        await articleRepository.update(
+          articleIds,
+          { status: "Failed" }
+        );
+      }
+    }
+  },
+
   createContentCalendar: async (
     formData: any,
     orgId: string,
@@ -50,6 +99,7 @@ export const databaseService = {
       where: [
         { status: "Writing....", orgId: orgId, moduleId: moduleId },
         { status: "published", orgId: orgId, moduleId: moduleId },
+        { status: "Failed", orgId: orgId, moduleId: moduleId },
       ],
       relations: {
         articles: true,
