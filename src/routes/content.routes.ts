@@ -8,12 +8,7 @@ export const contentRouter = Router();
 
 contentRouter.post("/generate", contentGeneratorController.generateArticle);
 contentRouter.post("/validate", contentGeneratorController.checkFormData);
-contentRouter.get(
-  "/published",
-  contentRetrieverController.getPublishedArticles
-);
-contentRouter.get(
-  "/calendar",
-  contentRetrieverController.getPublishedContentCalendarItems
-);
+contentRouter.get("/published",contentRetrieverController.getPublishedArticles);
+contentRouter.get("/calendar",contentRetrieverController.getPublishedContentCalendarItems);
 contentRouter.get("/:pagepath", contentRetrieverController.getArticleBySlug);
+contentRouter.delete("/:id", contentGeneratorController.deleteCalendarItem);

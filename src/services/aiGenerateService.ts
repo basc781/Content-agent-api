@@ -179,17 +179,18 @@ export const aiGenerateService = {
         // Parse the JSON content string
         const parsedContent = JSON.parse(data.content);
 
-        const prompt = `find the best most interesting deal on this page and summarise it in one sentence. Respond with {"best_deal":"the deal"}`;
+        
+
+        const prompt = `find the most interesting deals and actions on this page as background information for the following article we are writing: ----- BEGIN FORM DATA ----- ${JSON.stringify(formData)} 
+        ----- END FORM DATA ----- summarise this information in a JSON format. Respond with {"best_deal":"Most relevant deals and actions"} Below you can find the content of the article that you need to summarise: ----- BEGIN ARTICLE CONTENT ----- ${JSON.stringify(parsedContent)} ----- END ARTICLE CONTENT -----`;
+
+        console.log("Prompt--->:", prompt);
 
         const completion = await openai.chat.completions.create({
           messages: [
             {
               role: "user",
-              content: `${JSON.stringify(
-                parsedContent
-              )}\n\n${prompt} kan je deze in een json format teruggeven. Hieronder vind je de context van waar het artikel over gaat: ${JSON.stringify(
-                formData
-              )}`,
+              content: prompt,
             },
           ],
           model: "gpt-4o",
@@ -200,7 +201,7 @@ export const aiGenerateService = {
           completion.choices[0].message.content || "{}"
         ).best_deal;
 
-        console.log("Best deal:", bestDeal);
+        console.log("Best deal--->:", bestDeal);
 
         if (!bestDeal) {
           throw new Error("No best deal found");
