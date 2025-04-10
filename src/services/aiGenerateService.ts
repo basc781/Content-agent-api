@@ -3,6 +3,7 @@ import { ContentCalendar } from "../entities/ContentCalendar.js";
 import { Article } from "../entities/Article.js";
 import { AppDataSource } from "../data-source.js";
 import { OrgPreference } from "../entities/OrgPreferences.js";
+import { OrgModuleAccess } from "../entities/OrgModuleAccess.js";
 import { Module } from "../entities/Module.js";
 import { databaseService } from "./databaseService.js";
 
@@ -13,6 +14,7 @@ const openai = new OpenAI({
 const contentRepository = AppDataSource.getRepository(ContentCalendar);
 const articleRepository = AppDataSource.getRepository(Article);
 const orgPreferenceRepository = AppDataSource.getRepository(OrgPreference);
+const orgModuleAccessRepository = AppDataSource.getRepository(OrgModuleAccess);
 export const aiGenerateService = {
   // Generate a content calender for a company of which you have all necessary information. The calender structure is
   // hardcoded and the only variables in this version is the specific company and information about the company.
@@ -171,18 +173,24 @@ export const aiGenerateService = {
   },
   summarizeArticle: async (
     articleContext: Array<Record<string, any>>,
-    formData: string
+    formData: string,
+    orgId: string,
+    module: Module
   ) => {
     for (const store of articleContext) {
       const [storeName, data] = Object.entries(store)[0];
       try {
         // Parse the JSON content string
         const parsedContent = JSON.parse(data.content);
+        const orgModuleAccess = await orgModuleAccessRepository.findOneBy({
+          orgId: orgId,
+          moduleId: module.id,
+        });
 
+        const prompt = `${orgModuleAccess?.summaryPrompt}
+        ----- BEGIN FORM DATA ----- ${JSON.stringify(formData)} ----- END FORM DATA ----- 
         
-
-        const prompt = `find the most interesting deals and actions on this page as background information for the following article we are writing: ----- BEGIN FORM DATA ----- ${JSON.stringify(formData)} 
-        ----- END FORM DATA ----- summarise this information in a JSON format. Respond with {"best_deal":"Most relevant deals and actions"} Below you can find the content of the article that you need to summarise: ----- BEGIN ARTICLE CONTENT ----- ${JSON.stringify(parsedContent)} ----- END ARTICLE CONTENT -----`;
+        ----- BEGIN background information ----- ${JSON.stringify(parsedContent)} ----- END background information -----`;
 
         console.log("Prompt--->:", prompt);
 
@@ -197,18 +205,18 @@ export const aiGenerateService = {
           response_format: { type: "json_object" },
         });
 
-        const bestDeal = JSON.parse(
+        const summary = JSON.parse(
           completion.choices[0].message.content || "{}"
-        ).best_deal;
+        ).information;
 
-        console.log("Best deal--->:", bestDeal);
+        console.log("Summary--->:", summary);
 
-        if (!bestDeal) {
-          throw new Error("No best deal found");
+        if (!summary) {
+          throw new Error("No summary found");
         }
 
         // Add summary directly to the store object
-        store[storeName].summary = bestDeal;
+        store[storeName].summary = summary;
       } catch (error) {
         console.error(`Error processing ${storeName}:`, error);
         store[storeName].summary = {

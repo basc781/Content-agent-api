@@ -14,6 +14,9 @@ export class OrgModuleAccess {
   @Column("text", { nullable: true })
   prompt!: string;
 
+  @Column("text", { nullable: true })
+  summaryPrompt!: string;
+
   @Column("int", { nullable: true })
   formSchemaId!: number;
 

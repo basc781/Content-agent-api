@@ -61,7 +61,9 @@ export const contentPipelineService = {
         // Step 4: Summarize article context (moved inside the websiteScraping condition)
         context.summarizedContext = await aiGenerateService.summarizeArticle(
           context.articleContext,
-          formData
+          formData,
+          orgId,
+          module
         );
         console.log("Summarised article context: ", context.summarizedContext);
         //Add a timer that waits 10 seconds to continue
