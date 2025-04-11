@@ -125,8 +125,8 @@ export const aiGenerateService = {
       // Add timeout and retry logic
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(
-          () => reject(new Error("OpenAI API timeout after 2 minutes")),
-          120000
+          () => reject(new Error("OpenAI API timeout after 3 minutes")),
+          180000
         );
       });
 
