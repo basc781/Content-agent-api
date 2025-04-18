@@ -5,6 +5,7 @@ import express, { Express } from "express";
 import cors from "cors";
 import { routes } from "./routes/index.js";
 import { AppDataSource } from "./data-source.js";
+import bodyParser from 'body-parser';
 
 import { clerkMiddleware } from "@clerk/express";
 import checkAuth from "./middleware/check-auth.js";
@@ -25,7 +26,8 @@ app.use(
   })
 );
 
-app.use(express.json());
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 app.use(clerkMiddleware());
 app.use(checkAuth);
 

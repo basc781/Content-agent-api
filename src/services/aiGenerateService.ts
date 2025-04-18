@@ -6,7 +6,7 @@ import { OrgPreference } from "../entities/OrgPreferences.js";
 import { OrgModuleAccess } from "../entities/OrgModuleAccess.js";
 import { Module } from "../entities/Module.js";
 import { databaseService } from "./databaseService.js";
-
+import { imagePayloadWithUrls, imagesWithDescription } from "../types/types.js";
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -15,6 +15,7 @@ const contentRepository = AppDataSource.getRepository(ContentCalendar);
 const articleRepository = AppDataSource.getRepository(Article);
 const orgPreferenceRepository = AppDataSource.getRepository(OrgPreference);
 const orgModuleAccessRepository = AppDataSource.getRepository(OrgModuleAccess);
+
 export const aiGenerateService = {
   // Generate a content calender for a company of which you have all necessary information. The calender structure is
   // hardcoded and the only variables in this version is the specific company and information about the company.
@@ -391,4 +392,40 @@ export const aiGenerateService = {
     );
     return validation;
   },
+  generateImageDescription: async (images: imagePayloadWithUrls) => {
+    const result: imagesWithDescription = { images: [] };
+    
+    for (const image of images.images) {
+      try {
+        const response = await openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [
+            {
+              role: "system",
+              content: "You are an expert at describing images in detail. Provide a comprehensive description that captures the main elements, context, and mood of the image."
+            },
+            {
+              role: "user",
+              content: [
+                { type: "text", text: "Please describe this image in detail:" },
+                { type: "image_url", image_url: { url: process.env.R2_PUBLIC_URL +"/" + image.uniqueFilename } }
+              ]
+            }
+          ],
+          max_tokens: 300
+        });
+
+        result.images.push({
+          ...image,
+          description: response.choices[0]?.message?.content || "No description generated"
+        });
+      } catch (error) {
+        console.error("Error generating image description:", error);
+        throw new Error("Failed to generate image description");
+      }
+    }
+    console.log("Result--->:", result);
+    return result;
+  },
+  
 };

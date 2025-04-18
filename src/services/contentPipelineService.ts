@@ -16,9 +16,6 @@ export const contentPipelineService = {
     module: Module
   ) => {
     try {
-      // Get user preferences
-      const userPrefs = await databaseService.getUserPreferences(orgId);
-
       // Convert imageUrls to array if it's a string
       const imageUrlsArray =
         typeof imageUrls === "string"
@@ -74,6 +71,12 @@ export const contentPipelineService = {
         );
         // Provide fallback context when scraping is disabled
         context.articleContext = { basicInfo: formData };
+      }
+
+      if (module.images) {
+        console.log("Images enabled, generating images");
+        const imagesToRetrieve =  
+        imageUrlsArray.push("https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png", "https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png");
       }
 
       // Step 5: Generate final article (always runs)

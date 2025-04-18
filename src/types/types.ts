@@ -37,3 +37,40 @@ export interface FormSchema {
   fields: FormField[];
   submitLabel?: string;
 }
+
+export interface imagePayload {
+  images: {
+    contentType: string;
+    filename: string;
+    uniqueFilename: string;
+  }[];
+}
+
+export interface imagePayloadWithUrls {
+  images: {
+    contentType: string;
+    filename: string;
+    uniqueFilename: string;
+    authenticatedUrl: string;
+  }[];
+}
+
+export interface imagesWithDescription {
+  images: {
+    contentType: string;
+    filename: string;
+    uniqueFilename: string;
+    authenticatedUrl: string;
+    description: string;
+  }[];
+}
+
+export interface GenerateMetadataRequest {
+  images: {
+    contentType: string;
+    filename: string;
+    uniqueFilename: string;
+    authenticatedUrl: string;
+  }[];
+  accessId: number;
+}

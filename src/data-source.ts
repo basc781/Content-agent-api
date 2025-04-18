@@ -6,6 +6,7 @@ import { OrgPreference } from "./entities/OrgPreferences.js";
 import { Module } from "./entities/Module.js";
 import { OrgModuleAccess } from "./entities/OrgModuleAccess.js";
 import { FormSchema } from "./entities/FormSchema.js";
+import { Image } from "./entities/images.js";
 export const AppDataSource = new DataSource({
   type: "mysql",
   username: process.env.DB_USER,
@@ -15,7 +16,7 @@ export const AppDataSource = new DataSource({
   database: process.env.DB_NAME,
   synchronize: true,
   logging: false,
-  entities: [Article, ContentCalendar, OrgPreference, Module, OrgModuleAccess, FormSchema],
+  entities: [Article, ContentCalendar, OrgPreference, Module, OrgModuleAccess, FormSchema, Image],
   migrations: [],
   subscribers: [],
 });

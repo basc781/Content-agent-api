@@ -1,14 +1,19 @@
-import { Entity, PrimaryColumn, ManyToOne, JoinColumn, Column } from "typeorm";
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, JoinColumn, Index } from "typeorm";
 import { OrgPreference } from "./OrgPreferences.js";
 import { Module } from "./Module.js";
 import { FormSchema } from "./FormSchema.js";
 
 @Entity("org_module_access")
 export class OrgModuleAccess {
-  @PrimaryColumn("varchar")
+  @PrimaryGeneratedColumn("increment")
+  id!: number;
+
+  @Index()
+  @Column("varchar")
   orgId!: string;
 
-  @PrimaryColumn("int")
+  @Index()
+  @Column("int")
   moduleId!: number;
 
   @Column("text", { nullable: true })
