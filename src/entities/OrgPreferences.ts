@@ -12,14 +12,14 @@ export class OrgPreference {
   organizationPrompt!: string;
 
   @Column({
-    type: "datetime",
+    type: "timestamptz",
     default: () => "CURRENT_TIMESTAMP",
     onUpdate: "CURRENT_TIMESTAMP",
   })
   updatedAt!: Date;
 
   @Column({
-    type: "datetime",
+    type: "timestamptz",
     default: () => "CURRENT_TIMESTAMP",
   })
   createdAt!: Date;

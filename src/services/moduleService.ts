@@ -6,11 +6,11 @@ export const moduleService = {
   /**
    * Generate article content through a configurable pipeline
    */
-  getModules: async (orgId: string): Promise<Module[]> => {
+  getModules: async (orgId: string): Promise<(Module & { accessId?: number })[]> => {
     try {
       // Get user preferences
       const modules = await databaseService.getOrgModules(orgId);
-
+      console.log("DIT ZIJN DE MODULES",modules);
       return modules;
     } catch (error) {
       console.error("Error getting modules:", error);

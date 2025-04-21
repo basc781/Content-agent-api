@@ -19,6 +19,8 @@ export const moduleController = {
       const moduleMap = modules.map((module) => ({
         name: module.name,
         slug: module.slug,
+        id: module.id,
+        accessId: module.accessId,
       }));
 
       res.json({

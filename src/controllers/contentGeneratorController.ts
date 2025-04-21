@@ -6,7 +6,6 @@ import { ArticleGenerationRequest } from "../types/types.js";
 import { getAuth } from "@clerk/express";
 
 export const contentGeneratorController = {
-
   deleteCalendarItem: async (req: Request, res: Response): Promise<void> => {
 
     console.log("Deleting calendar item");
@@ -72,7 +71,7 @@ export const contentGeneratorController = {
         request.website || "",
         contentCalendar.id,
         request.imageUrls || [],
-        module
+        module,
       );
 
       res.json({ article });

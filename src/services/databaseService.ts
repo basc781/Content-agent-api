@@ -4,6 +4,10 @@ import { Article } from "../entities/Article.js";
 import { OrgPreference } from "../entities/OrgPreferences.js";
 import { Module } from "../entities/Module.js";
 import { OrgModuleAccess } from "../entities/OrgModuleAccess.js";
+import { Image } from "../entities/images.js";
+import { imagesWithEmbeddings } from "../types/types.js";
+import pgvector from 'pgvector';
+import { moduleService } from "./moduleService.js";
 
 export const databaseService = {
 
@@ -118,22 +122,27 @@ export const databaseService = {
     return orgPreference;
   },
 
-  getOrgModules: async (orgId: string): Promise<Module[]> => {
+  getOrgModules: async (orgId: string): Promise<(Module & { accessId?: number })[]> => {
     const moduleRepository = AppDataSource.getRepository(Module);
 
     const modules = await moduleRepository
       .createQueryBuilder("module")
       .innerJoin("org_module_access", "access", "access.moduleId = module.id")
+      .addSelect("access.id", "accessId")
       .where("access.orgId = :orgId", { orgId })
-      .getMany();
+      .getRawAndEntities();
 
-    return modules;
+    // Combine the raw results (which contain accessId) with the entity results
+    return modules.entities.map((entity, index) => {
+      const raw = modules.raw[index];
+      return {
+        ...entity,
+        accessId: raw.accessId
+      };
+    });
   },
 
-  getModuleById: async (
-    orgId: string,
-    moduleId: number
-  ): Promise<Module | null> => {
+  getModuleById: async (orgId: string,moduleId: number): Promise<Module | null> => {
     const moduleRepository = AppDataSource.getRepository(Module);
 
     const module = await moduleRepository
@@ -200,4 +209,57 @@ export const databaseService = {
       throw error;
     }
   },
+
+  getImageByUrl: async (imageUrl: string): Promise<Image | null> => {
+    try {
+      const imageRepository = AppDataSource.getRepository(Image);
+      return await imageRepository.findOne({ 
+        where: { authenticatedUrl: imageUrl } 
+      });
+    } catch (error) {
+      console.error("Error getting image by URL:", error);
+      return null;
+    }
+  },
+
+  saveImage: async (imageData: imagesWithEmbeddings, orgModuleAccessId: number): Promise<Image[]> => {
+    console.log("DIT IS DE IMAGE DATA", orgModuleAccessId);
+    try {
+      const imageRepository = AppDataSource.getRepository(Image);
+      // Create and save all images in the array
+      const imagesToSave = imageData.images.map((img) => 
+        imageRepository.create({
+          filename: img.filename,
+          uniqueFilename: img.uniqueFilename,
+          authenticatedUrl: img.authenticatedUrl,
+          description: img.description,
+          contentType: img.contentType,
+          orgModuleAccessId: orgModuleAccessId,
+          embedding: pgvector.toSql(img.embedding)
+        })
+      );
+      
+      return await imageRepository.save(imagesToSave);
+    } catch (error) {
+      console.error("Error saving images:", error);
+      throw new Error("Failed to save images");
+    }
+  },
+
+  getRelevantAssets: async (module: Module, orgId: string, nearestNeighborEmbedding: number[]): Promise<Image[]> => {
+    const imageRepository = AppDataSource.getRepository(Image);
+    
+    const ModuleWithAccessId = await moduleService.getModuleBySlug(orgId, module.slug);
+    const accessid = ModuleWithAccessId?.orgModuleAccess[0].id;
+
+    const relevantAssets = await imageRepository
+      .createQueryBuilder("image")
+      .orderBy('image.embedding::vector <-> :embedding::vector', 'ASC')
+      .setParameters({embedding: pgvector.toSql(nearestNeighborEmbedding)})
+      .where("image.orgModuleAccessId = :accessid", { accessid })
+      .limit(5)
+      .getMany();
+    
+    return relevantAssets;
+  }
 };

@@ -34,13 +34,13 @@ export class ContentCalendar {
   moduleId!: number;
 
   @Column({
-    type: "datetime",
+    type: "timestamptz",
     default: () => "CURRENT_TIMESTAMP",
   })
   dateCreated!: Date;
 
   @Column({
-    type: "datetime",
+    type: "timestamptz",
     default: () => "CURRENT_TIMESTAMP",
     onUpdate: "CURRENT_TIMESTAMP",
   })

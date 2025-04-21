@@ -28,6 +28,9 @@ export class Module {
   images!: boolean;
 
   @Column("boolean", { nullable: true })
+  assetLibrary!: boolean;
+
+  @Column("boolean", { nullable: true })
   productAPI!: boolean;
 
   @Column({ type: "enum", enum: ["markdown", "json"], nullable: false })
@@ -40,14 +43,14 @@ export class Module {
   orgModuleAccess!: OrgModuleAccess[];
 
   @Column({
-    type: "datetime",
+    type: "timestamptz",
     default: () => "CURRENT_TIMESTAMP",
     onUpdate: "CURRENT_TIMESTAMP",
   })
   updatedAt!: Date;
 
   @Column({
-    type: "datetime",
+    type: "timestamptz",
     default: () => "CURRENT_TIMESTAMP",
   })
   createdAt!: Date;
