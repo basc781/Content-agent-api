@@ -2,13 +2,12 @@ services:
   postgres:
     image: pgvector/pgvector:0.8.0-pg17
     environment:
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
-      POSTGRES_DB: ${DB_NAME:-mydb}
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: WSSADSNQEas233
+      POSTGRES_DB: content-agent-db
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
 volumes:
   postgres_data:

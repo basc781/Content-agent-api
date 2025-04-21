@@ -2,8 +2,9 @@ import { Request, Response } from "express";
 import { getAuth } from "@clerk/express";
 import { analyseImageService } from "../services/bucketService.js";
 import { aiGenerateService } from "../services/aiGenerateService.js";
-import { imagePayloadWithUrls, imagesWithDescription, GenerateMetadataRequest } from "../types/types.js";
+import { imagePayloadWithUrls, imagesWithDescription, GenerateMetadataRequest, imagesWithEmbeddings } from "../types/types.js";
 import { databaseService } from "../services/databaseService.js";
+
 
 export const imagesController = {
 
@@ -54,7 +55,9 @@ export const imagesController = {
 
       const imagesWithDescriptions: imagesWithDescription = await aiGenerateService.generateImageDescription(imagesToUpload);
 
-      await databaseService.saveImage(imagesWithDescriptions, orgModuleAccessId);
+      const imagesWithEmbeddings: imagesWithEmbeddings = await aiGenerateService.generateDescriptionEmbedding(imagesWithDescriptions);
+      
+      await databaseService.saveImage(imagesWithEmbeddings, orgModuleAccessId);
 
       res.json({ images: imagesWithDescriptions.images  });
 

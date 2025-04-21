@@ -65,6 +65,17 @@ export interface imagesWithDescription {
   }[];
 }
 
+export interface imagesWithEmbeddings {
+  images: {
+    contentType: string;
+    filename: string;
+    uniqueFilename: string;
+    authenticatedUrl: string;
+    description: string;
+    embedding: number[];
+  }[];
+}
+
 export interface GenerateMetadataRequest {
   images: {
     contentType: string;

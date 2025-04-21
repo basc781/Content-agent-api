@@ -41,7 +41,7 @@ export class Article {
   pagepath!: string;
 
   @Column({
-    type: "datetime",
+    type: "timestamptz",
     default: () => "CURRENT_TIMESTAMP",
   })
   createdAt!: Date;

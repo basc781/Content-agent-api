@@ -5,7 +5,9 @@ import { OrgPreference } from "../entities/OrgPreferences.js";
 import { Module } from "../entities/Module.js";
 import { OrgModuleAccess } from "../entities/OrgModuleAccess.js";
 import { Image } from "../entities/images.js";
-import { imagesWithDescription } from "../types/types.js";
+import { imagesWithEmbeddings } from "../types/types.js";
+import pgvector from 'pgvector';
+import { moduleService } from "./moduleService.js";
 
 export const databaseService = {
 
@@ -220,19 +222,20 @@ export const databaseService = {
     }
   },
 
-  saveImage: async (imageData: imagesWithDescription, orgModuleAccessId: number): Promise<Image[]> => {
+  saveImage: async (imageData: imagesWithEmbeddings, orgModuleAccessId: number): Promise<Image[]> => {
     console.log("DIT IS DE IMAGE DATA", orgModuleAccessId);
     try {
       const imageRepository = AppDataSource.getRepository(Image);
       // Create and save all images in the array
-      const imagesToSave = imageData.images.map(img => 
+      const imagesToSave = imageData.images.map((img) => 
         imageRepository.create({
           filename: img.filename,
           uniqueFilename: img.uniqueFilename,
           authenticatedUrl: img.authenticatedUrl,
           description: img.description,
           contentType: img.contentType,
-          orgModuleAccessId: orgModuleAccessId
+          orgModuleAccessId: orgModuleAccessId,
+          embedding: pgvector.toSql(img.embedding)
         })
       );
       
@@ -241,5 +244,22 @@ export const databaseService = {
       console.error("Error saving images:", error);
       throw new Error("Failed to save images");
     }
+  },
+
+  getRelevantAssets: async (module: Module, orgId: string, nearestNeighborEmbedding: number[]): Promise<Image[]> => {
+    const imageRepository = AppDataSource.getRepository(Image);
+    
+    const ModuleWithAccessId = await moduleService.getModuleBySlug(orgId, module.slug);
+    const accessid = ModuleWithAccessId?.orgModuleAccess[0].id;
+
+    const relevantAssets = await imageRepository
+      .createQueryBuilder("image")
+      .orderBy('image.embedding::vector <-> :embedding::vector', 'ASC')
+      .setParameters({embedding: pgvector.toSql(nearestNeighborEmbedding)})
+      .where("image.orgModuleAccessId = :accessid", { accessid })
+      .limit(5)
+      .getMany();
+    
+    return relevantAssets;
   }
 };

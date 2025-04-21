@@ -21,6 +21,9 @@ export class Image {
   @Column("text", { nullable: false })
   contentType!: string;
 
+  @Column({ nullable: true })
+  embedding?: string;
+
   @Column("int", { nullable: false })
   orgModuleAccessId!: number;
 
@@ -29,14 +32,14 @@ export class Image {
   orgModuleAccess!: OrgModuleAccess;
 
   @Column({
-    type: "datetime",
+    type: "timestamptz",
     default: () => "CURRENT_TIMESTAMP",
     onUpdate: "CURRENT_TIMESTAMP",
   })
   updatedAt!: Date;
 
   @Column({
-    type: "datetime",
+    type: "timestamptz",
     default: () => "CURRENT_TIMESTAMP",
   })
   createdAt!: Date;

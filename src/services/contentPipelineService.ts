@@ -13,7 +13,7 @@ export const contentPipelineService = {
     website: string,
     contentCalendarId: number,
     imageUrls: string[] | string,
-    module: Module
+    module: Module,
   ) => {
     try {
       // Convert imageUrls to array if it's a string
@@ -31,8 +31,23 @@ export const contentPipelineService = {
         articleContext: null,
         summarizedContext: null,
         finalArticle: null,
+        module: module
       };
 
+      if (module.assetLibrary) {
+  
+        console.log("Asset library enabled, generating asset library");
+        
+        const nearestNeighborEmbedding = await aiGenerateService.generateNearestNeighborEmbedding(context);
+        context.nearestNeighborEmbedding = nearestNeighborEmbedding;
+
+        const relevantAssets = await databaseService.getRelevantAssets(context.module, orgId, context.nearestNeighborEmbedding);
+
+        imageUrlsArray.push(...relevantAssets.map((asset: any) => process.env.R2_PUBLIC_URL + "/" + asset.uniqueFilename));
+        
+      }else{
+        console.log("Asset library disabled, skipping asset library");
+      }      
       // Check if websiteScraping is enabled
       if (module.webScraper) {
         console.log("Starting to scrape website:", website);
@@ -71,12 +86,6 @@ export const contentPipelineService = {
         );
         // Provide fallback context when scraping is disabled
         context.articleContext = { basicInfo: formData };
-      }
-
-      if (module.images) {
-        console.log("Images enabled, generating images");
-        const imagesToRetrieve =  
-        imageUrlsArray.push("https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png", "https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png");
       }
 
       // Step 5: Generate final article (always runs)
