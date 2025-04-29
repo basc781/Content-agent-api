@@ -32,14 +32,27 @@ app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 app.use(clerkMiddleware());
 app.use(checkAuth);
 
-AppDataSource.initialize()
-  .then(() => {
+const initializeDatabase = async () => {
+  try {
+    await AppDataSource.initialize();
     console.log("Database connected");
+
+    // Create vector extension
+    await AppDataSource.query('CREATE EXTENSION IF NOT EXISTS vector');
+    console.log("Vector extension initialized");
 
     app.use("/api", routes);
 
     app.listen(port, () => {
       console.log(`Server running at http://localhost:${port}`);
     });
-  })
-  .catch((error) => console.log("Database connection error:", error));
+  } catch (error) {
+    console.error("Database initialization error:", error);
+    process.exit(1);
+  }
+};
+
+initializeDatabase().catch(error => {
+  console.error("Application startup failed:", error);
+  process.exit(1);
+});
