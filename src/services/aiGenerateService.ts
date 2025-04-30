@@ -396,10 +396,9 @@ export const aiGenerateService = {
   },
   generateImageDescription: async (images: imagePayloadWithUrls) => {
     const result: imagesWithDescription = { images: [] };
-    
-    console.log("Now at number:", result.images.length + 1, "of", images.images.length);
 
     for (const image of images.images) {
+      console.log("Now at number:", result.images.length + 1, "of", images.images.length);
       try {
         console.log("Generating image description for", image);
         const response = await openai.chat.completions.create({

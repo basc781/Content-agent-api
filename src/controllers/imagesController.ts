@@ -63,7 +63,7 @@ export const imagesController = {
 
     } catch (error) {
       console.error("Error generating metadata:", error);
-      res.status(500).json({ error: "Failed to generate metadata" });
+      res.status(500).json({ error: "Failed to start generating metadata" });
     }
   }
 };
