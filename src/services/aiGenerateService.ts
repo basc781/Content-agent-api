@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { GoogleGenAI } from "@google/genai";
 import { ContentCalendar } from "../entities/ContentCalendar.js";
 import { Article } from "../entities/Article.js";
 import { AppDataSource } from "../data-source.js";
@@ -7,16 +8,17 @@ import { OrgModuleAccess } from "../entities/OrgModuleAccess.js";
 import { Module } from "../entities/Module.js";
 import { databaseService } from "./databaseService.js";
 import { imagePayloadWithUrls, imagesWithDescription, imagesWithEmbeddings } from "../types/types.js";
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+
+//Intiliase API keys for model providers
+const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY,});
+const gemini = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY,});
 
 const contentRepository = AppDataSource.getRepository(ContentCalendar);
 const articleRepository = AppDataSource.getRepository(Article);
 const orgPreferenceRepository = AppDataSource.getRepository(OrgPreference);
 const orgModuleAccessRepository = AppDataSource.getRepository(OrgModuleAccess);
 
-export const aiGenerateService = {
+export const aiGenerateServiceOpenAI = {
   // Generate a content calender for a company of which you have all necessary information. The calender structure is
   // hardcoded and the only variables in this version is the specific company and information about the company.
   generateCalender: async (
@@ -233,7 +235,8 @@ export const aiGenerateService = {
     contentId: number,
     imageUrls: Array<string>,
     orgId: string,
-    module: Module
+    module: Module,
+    internetSearch: string
   ) => {
     console.log("Input context size:", JSON.stringify(articleContext).length);
     console.log("Input context type:", typeof articleContext);
@@ -243,11 +246,6 @@ export const aiGenerateService = {
       "Input context structure:",
       articleContext ? Object.keys(articleContext) : "No context available"
     );
-
-    // Add a timer that waits 10 seconds to continue
-    await new Promise((resolve) => setTimeout(resolve, 10000));
-    console.log("Waiting almost done");
-    await new Promise((resolve) => setTimeout(resolve, 20000));
 
     const orgPreference = await orgPreferenceRepository.findOneBy({
       orgId: orgId,
@@ -266,8 +264,7 @@ export const aiGenerateService = {
     console.log("Content item:", contentItem);
 
     // Filter only essential data if websiteScraping is enabled
-    const contextForPrompt =
-      module.webScraper && Array.isArray(articleContext) && articleContext
+    const contextForPrompt = module.webScraper && Array.isArray(articleContext) && articleContext
         ? articleContext.map((store) => {
             const [storeName, data] = Object.entries(store)[0];
             return {
@@ -319,6 +316,10 @@ export const aiGenerateService = {
 
         ${JSON.stringify(contextForPrompt)}
 
+        ----- Internet Search -----
+        Below you can find relevant information that was found by searching the internet. This means it is very relevant for current topics and events of which you can make use of in the article. Always try to include current events and topics in the article if any relevant information is found.
+        ${internetSearch}
+        
         ----- Module Purpose -----
         ${module.purpose || "Genereer een SEO-vriendelijk artikel"}
         `;
@@ -327,7 +328,7 @@ export const aiGenerateService = {
 
     const completion = await openai.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
-      model: "o1",
+      model: "o3",
     });
 
     const article = completion.choices[0].message.content;
@@ -486,5 +487,32 @@ export const aiGenerateService = {
 
     return embedding.data[0].embedding;
   },
+
+  simplePrompt: async (prompt: string): Promise<string> => {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [{ role: "user", content: prompt }],
+    });
+    return completion.choices[0].message.content || "No response from OpenAI";
+  }
   
 };
+
+export const aiGenerateServiceGemini = {
+
+  AIinternetSearch: async (query: string): Promise<string> => {
+    const response = await gemini.models.generateContent({
+      model: "gemini-2.5-pro-preview-03-25",
+      contents: [query],
+      config: {
+        tools: [{googleSearch:{}}],
+      },
+    });
+
+    if (!response.candidates?.[0]?.content?.parts?.[0]?.text) {
+      throw new Error("No response or wrong response format from Gemini");
+    }
+    return response.candidates[0].content.parts[0].text;
+  }
+
+}

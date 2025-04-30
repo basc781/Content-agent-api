@@ -1,9 +1,10 @@
 import { Request, Response } from "express";
-import { aiGenerateService } from "../services/aiGenerateService.js";
+import { aiGenerateServiceGemini, aiGenerateServiceOpenAI } from "../services/aiGenerateService.js";
 import { databaseService } from "../services/databaseService.js";
 import { contentPipelineService } from "../services/contentPipelineService.js";
 import { ArticleGenerationRequest } from "../types/types.js";
 import { getAuth } from "@clerk/express";
+
 
 export const contentGeneratorController = {
   deleteCalendarItem: async (req: Request, res: Response): Promise<void> => {
@@ -91,7 +92,7 @@ export const contentGeneratorController = {
       }
 
       console.log("Form data is complete");
-      const formDataValidation = await aiGenerateService.validateFormData(
+      const formDataValidation = await aiGenerateServiceOpenAI.validateFormData(
         req.body.formData,
         orgId
       );
@@ -102,6 +103,12 @@ export const contentGeneratorController = {
       return;
     }
   },
+  searchArticles: async (req: Request, res: Response): Promise<void> => {
+    const query = req.body.query;
+    const response = await aiGenerateServiceGemini.AIinternetSearch(query);
+    console.log("Response: ", response);
+    res.json({ "Internet Search": response });
+  }
 };
 
 export const contentRetrieverController = {
