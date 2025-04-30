@@ -419,7 +419,10 @@ export const aiGenerateService = {
         });
       } catch (error) {
         console.error("Error generating image description:", error);
-        throw new Error("Failed to generate image description");
+        result.images.push({
+          ...image,
+          description: "No description generated"
+        });
       }
     }
     console.log("Result--->:", result);
