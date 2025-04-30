@@ -399,6 +399,7 @@ export const aiGenerateService = {
     
     for (const image of images.images) {
       try {
+        console.log("Generating image description for", image);
         const response = await openai.chat.completions.create({
           model: "gpt-4o",
           messages: [
@@ -412,6 +413,8 @@ export const aiGenerateService = {
           ],
           max_tokens: 300
         });
+
+        console.log("Response of",image,response.choices[0])
 
         result.images.push({
           ...image,
