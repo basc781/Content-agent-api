@@ -53,13 +53,13 @@ export const imagesController = {
       const orgModuleAccessId = body.accessId;
       console.log("DIT IS DE ORG MODULE ACCESS ID", orgModuleAccessId);
 
+      res.json({ "response": "Successfully started generating metadata", "images": imagesToUpload.images });
+
       const imagesWithDescriptions: imagesWithDescription = await aiGenerateService.generateImageDescription(imagesToUpload);
 
       const imagesWithEmbeddings: imagesWithEmbeddings = await aiGenerateService.generateDescriptionEmbedding(imagesWithDescriptions);
       
       await databaseService.saveImage(imagesWithEmbeddings, orgModuleAccessId);
-
-      res.json({ images: imagesWithDescriptions.images  });
 
     } catch (error) {
       console.error("Error generating metadata:", error);
