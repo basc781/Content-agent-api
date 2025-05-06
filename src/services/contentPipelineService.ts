@@ -1,7 +1,8 @@
 import { scraperService } from "./scraperService.js";
-import { aiGenerateService } from "./aiGenerateService.js";
+import { aiGenerateServiceGemini, aiGenerateServiceOpenAI } from "./aiGenerateService.js";
 import { databaseService } from "./databaseService.js";
 import { Module } from "../entities/Module.js";
+import { imagesSearchEmbeddings } from "../types/types.js";
 
 export const contentPipelineService = {
   /**
@@ -13,7 +14,7 @@ export const contentPipelineService = {
     website: string,
     contentCalendarId: number,
     imageUrls: string[] | string,
-    module: Module,
+    module: Module
   ) => {
     try {
       // Convert imageUrls to array if it's a string
@@ -30,24 +31,22 @@ export const contentPipelineService = {
         filteredStores: [],
         articleContext: null,
         summarizedContext: null,
-        finalArticle: null,
-        module: module
+        draftArticle: null,
+        module: module,
+        internetSearch: null
       };
 
-      if (module.assetLibrary) {
-  
-        console.log("Asset library enabled, generating asset library");
-        
-        const nearestNeighborEmbedding = await aiGenerateService.generateNearestNeighborEmbedding(context);
-        context.nearestNeighborEmbedding = nearestNeighborEmbedding;
 
-        const relevantAssets = await databaseService.getRelevantAssets(context.module, orgId, context.nearestNeighborEmbedding);
 
-        imageUrlsArray.push(...relevantAssets.map((asset: any) => process.env.R2_PUBLIC_URL + "/" + asset.uniqueFilename));
-        
-      }else{
-        console.log("Asset library disabled, skipping asset library");
-      }      
+      if (module.internetSearch) {
+        console.log("Internet search enabled, starting internet search");
+        const prompt = `Generate a prompt for an internet search that searches for current information about the following topic. Focus on information that is relevant at this current moment in time!!!!! Think of events, dates, etc. Current date: ${new Date().toISOString()} ${JSON.stringify(formData)}`;
+        console.log("Prompt: ", prompt);
+        const internetSearchPrompt = await aiGenerateServiceOpenAI.simplePrompt(prompt,"gpt-4o");
+        console.log("Internet search prompt: ", internetSearchPrompt);
+        context.internetSearch = await aiGenerateServiceGemini.AIinternetSearch(internetSearchPrompt);
+        console.log("Internet search: ", context.internetSearch);
+      }  
       // Check if websiteScraping is enabled
       if (module.webScraper) {
         console.log("Starting to scrape website:", website);
@@ -58,7 +57,7 @@ export const contentPipelineService = {
         );
 
         // Step 2: Generate filtered store list
-        context.filteredStores = await aiGenerateService.generateStoreList(
+        context.filteredStores = await aiGenerateServiceOpenAI.generateStoreList(
           contentCalendarId,
           JSON.stringify(context.availableStores)
         );
@@ -71,7 +70,7 @@ export const contentPipelineService = {
         console.log("Article context: ", context.articleContext);
 
         // Step 4: Summarize article context (moved inside the websiteScraping condition)
-        context.summarizedContext = await aiGenerateService.summarizeArticle(
+        context.summarizedContext = await aiGenerateServiceOpenAI.summarizeArticle(
           context.articleContext,
           formData,
           orgId,
@@ -88,17 +87,48 @@ export const contentPipelineService = {
         context.articleContext = { basicInfo: formData };
       }
 
+
       // Step 5: Generate final article (always runs)
-      context.finalArticle = await aiGenerateService.generateArticle(
+      context.draftArticle = await aiGenerateServiceOpenAI.generateArticle(
         context.summarizedContext, // Use summarized if available, otherwise use article context
         contentCalendarId,
         imageUrlsArray,
         orgId,
-        module
+        module,
+        context.internetSearch
       );
       console.log("Article generated successfully");
 
-      return context.finalArticle;
+
+      if (module.assetLibrary) {
+  
+        console.log("Asset library enabled, generating asset library");
+        
+        const nearestNeighborEmbedding = await aiGenerateServiceOpenAI.generateNearestNeighborEmbedding(context.draftArticle) as imagesSearchEmbeddings[];
+        context.nearestNeighborEmbeddings = nearestNeighborEmbedding as imagesSearchEmbeddings[];
+        
+        const relevantAssets = await databaseService.getRelevantAssets(context.module, orgId, context.nearestNeighborEmbeddings as imagesSearchEmbeddings[]);
+        console.log('relevant imges!!!!!',relevantAssets )
+
+        imageUrlsArray.push(...relevantAssets.map((asset: any) => process.env.R2_PUBLIC_URL + "/" + asset.uniqueFilename));
+      }else{
+        console.log("Asset library disabled, skipping asset library");
+      }    
+
+      //step 6: generate the final article
+      const finalPrompt = `
+      We hebben een draft artikel geschreven en daar achteraf afbeeldingen bij gevonden. Aan jouw de taak om in markdown annotatie de afbeeldingen toe te voegen aan het artikel. belangrijk is dat je dit op de relevante plekken doet.
+      Hieronder vind je het artikel:
+      ${context.draftArticle}
+
+      Hieronder vind je de afbeeldingen:
+      ${JSON.stringify(imageUrlsArray)}`
+      context.finalArticle = await aiGenerateServiceOpenAI.simplePrompt(finalPrompt,"o1");
+      //step 7: save the article to the database  
+      const savedArticle = await databaseService.saveArticle(context.finalArticle, contentCalendarId, orgId, module.outputFormat);
+      //
+
+      return savedArticle;
     } catch (error) {
       console.error("Error in content pipeline:", error);
       throw error;

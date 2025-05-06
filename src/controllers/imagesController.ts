@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { getAuth } from "@clerk/express";
 import { analyseImageService } from "../services/bucketService.js";
-import { aiGenerateService } from "../services/aiGenerateService.js";
+import { aiGenerateServiceOpenAI } from "../services/aiGenerateService.js";
 import { imagePayloadWithUrls, imagesWithDescription, GenerateMetadataRequest, imagesWithEmbeddings } from "../types/types.js";
 import { databaseService } from "../services/databaseService.js";
 
@@ -55,9 +55,9 @@ export const imagesController = {
 
       res.json({ "response": "Successfully started generating metadata", "images": imagesToUpload.images });
 
-      const imagesWithDescriptions: imagesWithDescription = await aiGenerateService.generateImageDescription(imagesToUpload);
+      const imagesWithDescriptions: imagesWithDescription = await aiGenerateServiceOpenAI.generateImageDescription(imagesToUpload);
 
-      const imagesWithEmbeddings: imagesWithEmbeddings = await aiGenerateService.generateDescriptionEmbedding(imagesWithDescriptions);
+      const imagesWithEmbeddings: imagesWithEmbeddings = await aiGenerateServiceOpenAI.generateDescriptionEmbedding(imagesWithDescriptions);
       
       await databaseService.saveImage(imagesWithEmbeddings, orgModuleAccessId);
 

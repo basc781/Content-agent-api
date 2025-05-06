@@ -1,3 +1,5 @@
+import { Image } from "../entities/images.js";
+
 export interface ArticleFormData {
   titel: string;
   event: string;
@@ -84,4 +86,11 @@ export interface GenerateMetadataRequest {
     authenticatedUrl: string;
   }[];
   accessId: number;
+}
+
+export interface imagesSearchEmbeddings {
+  paragraaf: string;
+  beschrijving_afbeelding: string;
+  searchEmbedding: number[];
+  assets?: Image[];
 }

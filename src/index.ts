@@ -29,8 +29,11 @@ app.use(
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 
-app.use(clerkMiddleware());
-app.use(checkAuth);
+if (process.env.ENVIRONMENT !== "localhost") {
+  app.use(clerkMiddleware());
+  app.use(checkAuth);
+  console.log("Clerk middleware and checkAuth middleware applied");
+}
 
 const initializeDatabase = async () => {
   try {
