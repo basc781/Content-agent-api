@@ -454,6 +454,7 @@ export const aiGenerateServiceOpenAI = {
   generateNearestNeighborEmbedding: async (draftArticle: any) => {
     const prompt = `
       Je bent een expert in het zoeken naar afbeeldingen die relevant zijn voor dit artikel. Vandaar dat je per paragraaf/subkop een beschrijving maakt van het soort afbeeldingen die relevant zijn voor de context.
+      De image library waar met deze beschrijvingen in gezocht gaat worden bestaat voornamelijk uit afbeeldingen van bloemen en planten etc etc. Houd hier dus rekening mee dat je omschrijvingen niet te specifiek zijn en gericht zijn op bloemen en planten.
       Hieronder vind je het artikel dat je moet lezen en per paragraaf/subkop een beschrijving maken van het soort afbeeldingen die relevant zijn voor de context.
 
       ${draftArticle}
