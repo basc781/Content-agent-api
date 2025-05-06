@@ -267,6 +267,7 @@ export const databaseService = {
         .limit(2)
         .getMany();
         
+      console.log("Assets--->:", assets);
       embedding.assets = assets;
     }
     return relevantAssets;
