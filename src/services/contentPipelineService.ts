@@ -112,20 +112,20 @@ export const contentPipelineService = {
 
         console.log("Asset URLs: ", assetUrls);
         imageUrlsArray.push(...assetUrls);
+
+        const finalPrompt = `
+        We hebben een draft artikel geschreven en daar achteraf afbeeldingen bij gevonden. Aan jouw de taak om in markdown annotatie de afbeeldingen toe te voegen aan het artikel. belangrijk is dat je dit op de relevante plekken doet.
+        Belangrijk is dat je ALTIJD in ${module.outputFormat} format reageerd. Voeg nooit de '''markdown''' of '''emailHTML''' tags toe.
+        ------ Hieronder vind je het artikel -------:
+        ${context.draftArticle}
+
+        ------ Hieronder vind je de afbeeldingen -------  :
+        ${JSON.stringify(imageUrlsArray)}`
+        context.finalArticle = await aiGenerateServiceOpenAI.simplePrompt(finalPrompt,"o1");
       }else{
         console.log("Asset library disabled, skipping asset library");
-      }    
-
-      //step 6: generate the final article
-      const finalPrompt = `
-      We hebben een draft artikel geschreven en daar achteraf afbeeldingen bij gevonden. Aan jouw de taak om in markdown annotatie de afbeeldingen toe te voegen aan het artikel. belangrijk is dat je dit op de relevante plekken doet.
-      Belangrijk is dat je ALTIJD in ${module.outputFormat} format reageerd. Voeg nooit de '''markdown''' of '''emailHTML''' tags toe.
-      ------ Hieronder vind je het artikel -------:
-      ${context.draftArticle}
-
-      ------ Hieronder vind je de afbeeldingen -------  :
-      ${JSON.stringify(imageUrlsArray)}`
-      context.finalArticle = await aiGenerateServiceOpenAI.simplePrompt(finalPrompt,"o1");
+        context.finalArticle = context.draftArticle;
+      }          
       //step 7: save the article to the database  
       const savedArticle = await databaseService.saveArticle(context.finalArticle, contentCalendarId, orgId, module.outputFormat);
       //
