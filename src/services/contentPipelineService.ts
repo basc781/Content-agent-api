@@ -111,7 +111,7 @@ export const contentPipelineService = {
         const assetUrls = relevantAssets.map(paragraph => paragraph.assets?.[0] ? process.env.R2_PUBLIC_URL + "/" + paragraph.assets[0].uniqueFilename : null).filter(url => url !== null);
 
         console.log("Asset URLs: ", assetUrls);
-        imageUrlsArray.push(...assetUrls.map((asset: any) => process.env.R2_PUBLIC_URL + "/" + asset.uniqueFilename));
+        imageUrlsArray.push(...assetUrls);
       }else{
         console.log("Asset library disabled, skipping asset library");
       }    
