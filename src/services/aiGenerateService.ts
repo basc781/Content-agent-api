@@ -453,26 +453,39 @@ export const aiGenerateServiceOpenAI = {
   },
   generateNearestNeighborEmbedding: async (draftArticle: any) => {
     const prompt = `
-      Je bent een expert in het zoeken naar afbeeldingen die relevant zijn voor dit artikel. Vandaar dat je per paragraaf/subkop een beschrijving maakt van het soort afbeeldingen die relevant zijn voor de context.
-      De image library waar met deze beschrijvingen in gezocht gaat worden bestaat voornamelijk uit afbeeldingen van bloemen en planten etc etc. Houd hier dus rekening mee dat je omschrijvingen niet te specifiek zijn en gericht zijn op bloemen en planten.
-      Hieronder vind je het artikel dat je moet lezen en per paragraaf/subkop een beschrijving maken van het soort afbeeldingen die relevant zijn voor de context.
+Je bent een expert in het vinden van afbeeldingen die perfect aansluiten bij een tekst.  
+Voor iedere paragraaf of subkop in het onderstaande artikel maak je **één** beschrijving
+("beschrijving_afbeelding") van het ideale beeld.
 
-      ${draftArticle}
+🔍 **Specifiek zijn is verplicht**  
+– Noem expliciet bloem‑ of plantensoorten (Nederlandse én/of Latijnse naam).  
+– Beschrijf dominante of contrasterende kleuren.  
+– Vermeld setting/omgeving (kas, weide, huiskamer, studio, etc.).  
+– Benoem perspectief of camerastandpunt (macro, flatlay, close‑up).  
+– Voeg eventuele handeling of sfeer toe (bijv. dauwdruppels, zacht tegenlicht).
 
-      Antwoord in het volgende json formaat:
-      {
-        "paragraphs": [
-          {
-            "beschrijving_afbeelding": "Gedetailleerde beschrijving van het soort afbeelding dat relevant is voor deze paragraaf",
-            "paragraaf": "De paragraaf waar de beschrijving van de afbeelding relevant is"
-          },
-          {
-            "beschrijving_afbeelding": "Gedetailleerde beschrijving van het soort afbeelding dat relevant is voor deze paragraaf",
-            "paragraaf": "De paragraaf waar de beschrijving van de afbeelding relevant is"
-          }
-        ]
-      }
-    `;
+🚫 Vermijd vage termen als "bloemen", "boeket", "mooie planten".  
+🚫 Schrijf maximaal twee zinnen; geen opsommingen, geen merknamen tenzij expliciet in de tekst.  
+➡️ De interne beeldbibliotheek bevat vooral bloemen & planten, maar focus op **onderscheidende visuele kenmerken** zodat de zoekopdracht niet bij generieke beelden uitkomt.
+
+=== Artikel ===
+${draftArticle}
+
+Geef **uitsluitend** geldig JSON terug in het volgende formaat:
+
+{
+  "paragraphs": [
+    {
+      "beschrijving_afbeelding": "Gedetailleerde beschrijving van het gewenste beeld, met specifieke soorten, kleuren en setting",
+      "paragraaf": "De paragraaf waar deze beschrijving op slaat"
+    },
+    {
+      "beschrijving_afbeelding": "...",
+      "paragraaf": "..."
+    }
+  ]
+}
+`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
