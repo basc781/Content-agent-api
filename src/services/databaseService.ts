@@ -264,7 +264,7 @@ export const databaseService = {
         .orderBy('image.embedding::vector <-> :embedding::vector', 'ASC')
         .setParameters({embedding: pgvector.toSql(embedding.searchEmbedding)})
         .where("image.orgModuleAccessId = :accessid", { accessid })
-        .limit(2)
+        .limit(1)
         .getMany();
         
       console.log("Assets--->:", assets);

@@ -108,9 +108,10 @@ export const contentPipelineService = {
         context.nearestNeighborEmbeddings = nearestNeighborEmbedding as imagesSearchEmbeddings[];
         
         const relevantAssets = await databaseService.getRelevantAssets(context.module, orgId, context.nearestNeighborEmbeddings as imagesSearchEmbeddings[]);
-        console.log('relevant imges!!!!!',relevantAssets )
+        const assetUrls = relevantAssets.map(paragraph => paragraph.assets?.[0] ? process.env.R2_PUBLIC_URL + "/" + paragraph.assets[0].uniqueFilename : null).filter(url => url !== null);
 
-        imageUrlsArray.push(...relevantAssets.map((asset: any) => process.env.R2_PUBLIC_URL + "/" + asset.uniqueFilename));
+        console.log("Asset URLs: ", assetUrls);
+        imageUrlsArray.push(...assetUrls.map((asset: any) => process.env.R2_PUBLIC_URL + "/" + asset.uniqueFilename));
       }else{
         console.log("Asset library disabled, skipping asset library");
       }    
