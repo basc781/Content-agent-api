@@ -279,8 +279,14 @@ export const aiGenerateServiceOpenAI = {
       orgId
     );
 
-    let outputFormat = module.outputFormat; 
-    // Default format
+    let outputFormat = "markdown";
+    if (module.outputFormat === "markdown") {
+      outputFormat = "markdown";
+    } else if (module.outputFormat === "emailHTML") {
+      outputFormat = "emailHTML";
+    } else {
+      outputFormat = "markdown";
+    }
 
     // Check if module has a promptTemplate, if not, fall back to the org's generateContentPrompt
     const promptInstructions = module.promptTemplate;
@@ -302,7 +308,7 @@ export const aiGenerateServiceOpenAI = {
         
         ----- Einde instructies -----
         
-        Belangrijk is dat je ALTIJD in ${outputFormat} format reageerd. Voeg nooit de '''markdown''' of '''emailHTML''' tags toe.
+        Belangrijk is dat je ALTIJD in ${outputFormat} format reageerd. Voeg nooit de '''markdown''' of '''emailHTML''' tags toe en probeer NOOT TABLES TE MAKEN.
         
         ----- Assets die je kunt gebruiken -----
         Voeg deze toe aan relevante plekken in het artikel. Probeer ze tussen de subkoppen door te plaatsen:
