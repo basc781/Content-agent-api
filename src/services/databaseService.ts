@@ -5,7 +5,7 @@ import { OrgPreference } from "../entities/OrgPreferences.js";
 import { Module } from "../entities/Module.js";
 import { OrgModuleAccess } from "../entities/OrgModuleAccess.js";
 import { Image } from "../entities/images.js";
-import { imagesWithEmbeddings } from "../types/types.js";
+import { imagesSearchEmbeddings, imagesWithEmbeddings } from "../types/types.js";
 import pgvector from 'pgvector';
 import { moduleService } from "./moduleService.js";
 
@@ -13,9 +13,13 @@ export const databaseService = {
 
   deleteContentCalendar: async (id: number) => {
     const contentCalendarRepository = AppDataSource.getRepository(ContentCalendar);
-    await contentCalendarRepository.delete(id);
     const articleRepository = AppDataSource.getRepository(Article);
-    await articleRepository.delete({ contentCalendarId: id });
+
+    // Update the status of the content calendar to "deleted"
+    await contentCalendarRepository.update(id, { status: "deleted" });
+
+    // Update the status of all related articles to "deleted"
+    await articleRepository.update({ contentCalendarId: id }, { status: "deleted" });
   },
 
   updateContentCalendarStatus: async () => {
@@ -246,20 +250,53 @@ export const databaseService = {
     }
   },
 
-  getRelevantAssets: async (module: Module, orgId: string, nearestNeighborEmbedding: number[]): Promise<Image[]> => {
+  getRelevantAssets: async (module: Module, orgId: string, nearestNeighborEmbeddings: imagesSearchEmbeddings[]): Promise<imagesSearchEmbeddings[]> => {
     const imageRepository = AppDataSource.getRepository(Image);
     
     const ModuleWithAccessId = await moduleService.getModuleBySlug(orgId, module.slug);
     const accessid = ModuleWithAccessId?.orgModuleAccess[0].id;
 
-    const relevantAssets = await imageRepository
-      .createQueryBuilder("image")
-      .orderBy('image.embedding::vector <-> :embedding::vector', 'ASC')
-      .setParameters({embedding: pgvector.toSql(nearestNeighborEmbedding)})
-      .where("image.orgModuleAccessId = :accessid", { accessid })
-      .limit(5)
-      .getMany();
+    const relevantAssets = [...nearestNeighborEmbeddings];
     
+    for (const embedding of nearestNeighborEmbeddings) {
+      const assets = await imageRepository
+        .createQueryBuilder("image")
+        .orderBy('image.embedding::vector <-> :embedding::vector', 'ASC')
+        .setParameters({embedding: pgvector.toSql(embedding.searchEmbedding)})
+        .where("image.orgModuleAccessId = :accessid", { accessid })
+        .limit(2)
+        .getMany();
+        
+      embedding.assets = assets;
+    }
     return relevantAssets;
+  },
+
+  saveArticle: async (article: string, contentId: number, orgId: string, outputFormat: string): Promise<Article> => {
+ const articleRepository = AppDataSource.getRepository(Article);
+    const contentRepository = AppDataSource.getRepository(ContentCalendar);
+
+    const contentItem = await contentRepository.findOneBy({ id: contentId });
+    if (!contentItem) {
+      throw new Error("No content item found for the provided ID");
+    }
+
+    const newArticle = new Article();
+    newArticle.text = article || "";
+    newArticle.contentCalendarId = contentItem.id || 0;
+    newArticle.status = "published";
+    newArticle.pagepath =
+      contentItem.title
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-") + contentItem.id.toString() || "";
+    newArticle.orgId = orgId;
+    newArticle.outputFormat = outputFormat;
+    await articleRepository.save(newArticle);
+
+    contentItem.status = "published";
+    await contentRepository.save(contentItem);
+
+    return newArticle;
   }
 };

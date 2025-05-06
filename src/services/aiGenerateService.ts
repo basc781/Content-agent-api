@@ -7,7 +7,7 @@ import { OrgPreference } from "../entities/OrgPreferences.js";
 import { OrgModuleAccess } from "../entities/OrgModuleAccess.js";
 import { Module } from "../entities/Module.js";
 import { databaseService } from "./databaseService.js";
-import { imagePayloadWithUrls, imagesWithDescription, imagesWithEmbeddings } from "../types/types.js";
+import { imagePayloadWithUrls, imagesWithDescription, imagesWithEmbeddings, imagesSearchEmbeddings } from "../types/types.js";
 
 //Intiliase API keys for model providers
 const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY,});
@@ -253,9 +253,6 @@ export const aiGenerateServiceOpenAI = {
     if (!orgPreference) {
       throw new Error("No org preference found for the provided ID");
     }
-    if (!orgPreference.organizationPrompt) {
-      throw new Error("No generateContentPrompt found for the provided ID");
-    }
 
     const contentItem = await contentRepository.findOneBy({ id: contentId });
     if (!contentItem) {
@@ -282,7 +279,8 @@ export const aiGenerateServiceOpenAI = {
       orgId
     );
 
-    let outputFormat = module.outputFormat || "markdown"; // Default format
+    let outputFormat = module.outputFormat; 
+    // Default format
 
     // Check if module has a promptTemplate, if not, fall back to the org's generateContentPrompt
     const promptInstructions = module.promptTemplate;
@@ -304,7 +302,7 @@ export const aiGenerateServiceOpenAI = {
         
         ----- Einde instructies -----
         
-        Belangrijk is dat je ALTIJD in ${outputFormat} format reageerd. Voeg nooit de '''markdown''' tags toe.
+        Belangrijk is dat je ALTIJD in ${outputFormat} format reageerd. Voeg nooit de '''markdown''' of '''emailHTML''' tags toe.
         
         ----- Assets die je kunt gebruiken -----
         Voeg deze toe aan relevante plekken in het artikel. Probeer ze tussen de subkoppen door te plaatsen:
@@ -334,21 +332,21 @@ export const aiGenerateServiceOpenAI = {
     const article = completion.choices[0].message.content;
     console.log("Generated article:", article);
 
-    const newArticle = new Article();
-    newArticle.text = article || "";
-    newArticle.contentCalendarId = contentItem.id || 0;
-    newArticle.status = "published";
-    newArticle.pagepath =
-      contentItem.title
-        .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, "")
-        .replace(/\s+/g, "-") + contentItem.id.toString() || "";
-    newArticle.orgId = orgId;
-    newArticle.outputFormat = outputFormat;
-    await articleRepository.save(newArticle);
+    // const newArticle = new Article();
+    // newArticle.text = article || "";
+    // newArticle.contentCalendarId = contentItem.id || 0;
+    // newArticle.status = "published";
+    // newArticle.pagepath =
+    //   contentItem.title
+    //     .toLowerCase()
+    //     .replace(/[^a-z0-9\s-]/g, "")
+    //     .replace(/\s+/g, "-") + contentItem.id.toString() || "";
+    // newArticle.orgId = orgId;
+    // newArticle.outputFormat = outputFormat;
+    // await articleRepository.save(newArticle);
 
-    contentItem.status = "published";
-    await contentRepository.save(contentItem);
+    // contentItem.status = "published";
+    // await contentRepository.save(contentItem);
 
     return article;
   },
@@ -453,15 +451,25 @@ export const aiGenerateServiceOpenAI = {
 
     return result;
   },
-  generateNearestNeighborEmbedding: async (context: any) => {
+  generateNearestNeighborEmbedding: async (draftArticle: any) => {
     const prompt = `
-      Je bent een expert in het genereren van embeddings voor het zoeken naar afbeeldingen. Genereer een gedetailleerde beschrijving van het soort afbeeldingen die relevant zijn voor de volgende context:
-      
-      ${JSON.stringify(context)}
+      Je bent een expert in het zoeken naar afbeeldingen die relevant zijn voor dit artikel. Vandaar dat je per paragraaf/subkop een beschrijving maakt van het soort afbeeldingen die relevant zijn voor de context.
+      Hieronder vind je het artikel dat je moet lezen en per paragraaf/subkop een beschrijving maken van het soort afbeeldingen die relevant zijn voor de context.
+
+      ${draftArticle}
 
       Antwoord in het volgende json formaat:
       {
-        "description": "Gedetailleerde beschrijving van het soort afbeeldingen die relevant zijn voor de context"
+        "paragraphs": [
+          {
+            "beschrijving_afbeelding": "Gedetailleerde beschrijving van het soort afbeelding dat relevant is voor deze paragraaf",
+            "paragraaf": "De paragraaf waar de beschrijving van de afbeelding relevant is"
+          },
+          {
+            "beschrijving_afbeelding": "Gedetailleerde beschrijving van het soort afbeelding dat relevant is voor deze paragraaf",
+            "paragraaf": "De paragraaf waar de beschrijving van de afbeelding relevant is"
+          }
+        ]
       }
     `;
 
@@ -475,24 +483,34 @@ export const aiGenerateServiceOpenAI = {
       throw new Error("No content generated by OpenAI");
     }
 
-    const description = JSON.parse(completion.choices[0].message.content);
+    const description = JSON.parse(completion.choices[0].message.content).paragraphs;
 
-    console.log("Description--->:", description);
+    const searchEmbeddings: imagesSearchEmbeddings[] = [];
 
-    const embedding = await openai.embeddings.create({
-      model: "text-embedding-3-small",
-      input: JSON.stringify(description),
-      encoding_format: "float",
-    });
+    for (const paragraph of description) {
+      const embedding = await openai.embeddings.create({
+        model: "text-embedding-3-small",
+        input: paragraph.beschrijving_afbeelding,
+        encoding_format: "float",
+      });
+      searchEmbeddings.push({
+        paragraaf: paragraph.paragraaf,
+        beschrijving_afbeelding: paragraph.beschrijving_afbeelding,
+        searchEmbedding: embedding.data[0].embedding
+      });
+    }
 
-    return embedding.data[0].embedding;
+    return searchEmbeddings;
   },
 
-  simplePrompt: async (prompt: string): Promise<string> => {
+  simplePrompt: async (prompt: string, model: string): Promise<string> => {
+    
+    console.log("Prompt--->:", prompt);
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: model,
       messages: [{ role: "user", content: prompt }],
     });
+    console.log("Completion--->:", completion.choices[0].message.content);
     return completion.choices[0].message.content || "No response from OpenAI";
   }
   

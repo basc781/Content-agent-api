@@ -36,7 +36,7 @@ export class Module {
   @Column("boolean", { nullable: true })
   internetSearch!: boolean;
 
-  @Column({ type: "enum", enum: ["markdown", "json"], nullable: false })
+  @Column({ type: "enum", enum: ["markdown", "json","emailHTML"], nullable: false })
   outputFormat!: string;
   
   @Column("text", { nullable: true })
