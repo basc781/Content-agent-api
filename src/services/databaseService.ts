@@ -259,40 +259,15 @@ export const databaseService = {
     const relevantAssets = [...nearestNeighborEmbeddings];
     
     for (const embedding of nearestNeighborEmbeddings) {
-      // Get assets and similarity scores
-      const assetsWithScores = await imageRepository
+      const assets = await imageRepository
         .createQueryBuilder("image")
-        .select([
-          "image.*",
-          "image.embedding::vector <-> :embedding::vector as similarity_score"
-        ])
         .orderBy('image.embedding::vector <-> :embedding::vector', 'ASC')
         .setParameters({embedding: pgvector.toSql(embedding.searchEmbedding)})
         .where("image.orgModuleAccessId = :accessid", { accessid })
         .limit(1)
-        .getRawMany();
-
-      console.log("Assets with similarity scores:", assetsWithScores.map(asset => ({
-        filename: asset.filename,
-        similarity_score: asset.similarity_score
-      })));
+        .getMany();
         
-      // Map back to Image entities for compatibility
-      const assets = assetsWithScores.map(asset => {
-        const image = new Image();
-        Object.assign(image, {
-          id: asset.id,
-          filename: asset.filename,
-          uniqueFilename: asset.unique_filename,
-          authenticatedUrl: asset.authenticated_url,
-          description: asset.description,
-          contentType: asset.content_type,
-          orgModuleAccessId: asset.org_module_access_id,
-          embedding: asset.embedding
-        });
-        return image;
-      });
-
+      console.log("Assets--->:", assets);
       embedding.assets = assets;
     }
     return relevantAssets;
