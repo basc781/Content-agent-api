@@ -108,6 +108,16 @@ export const contentGeneratorController = {
     const response = await aiGenerateServiceGemini.AIinternetSearch(query);
     console.log("Response: ", response);
     res.json({ "Internet Search": response });
+  },
+  translateArticle: async (req: Request, res: Response): Promise<void> => {
+    if (!req.body.article) {
+      res.status(400).json({ error: "Missing article" });
+      return;
+    }
+    const article = req.body.article;
+    const response = await aiGenerateServiceOpenAI.translateContent(article);
+    console.log("Response: ", response);
+    res.json({ response });
   }
 };
 

@@ -17,7 +17,7 @@ export const AppDataSource = new DataSource({
   database: process.env.POSTGRES_DB,
   synchronize: true,
   logging: false,
-  entities: [Article, ContentCalendar, OrgPreference, Module, OrgModuleAccess, FormSchema, Image],
+    entities: [Article, ContentCalendar, OrgPreference, Module, OrgModuleAccess, FormSchema, Image],
   migrations: [],
   subscribers: [],
   extra: {

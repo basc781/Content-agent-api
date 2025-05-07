@@ -1,20 +1,20 @@
 import OpenAI from "openai";
 import { GoogleGenAI } from "@google/genai";
 import { ContentCalendar } from "../entities/ContentCalendar.js";
-import { Article } from "../entities/Article.js";
 import { AppDataSource } from "../data-source.js";
 import { OrgPreference } from "../entities/OrgPreferences.js";
 import { OrgModuleAccess } from "../entities/OrgModuleAccess.js";
 import { Module } from "../entities/Module.js";
 import { databaseService } from "./databaseService.js";
 import { imagePayloadWithUrls, imagesWithDescription, imagesWithEmbeddings, imagesSearchEmbeddings } from "../types/types.js";
-
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const translationPrompts = require("./prompts.json");
 //Intiliase API keys for model providers
 const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY,});
 const gemini = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY,});
 
 const contentRepository = AppDataSource.getRepository(ContentCalendar);
-const articleRepository = AppDataSource.getRepository(Article);
 const orgPreferenceRepository = AppDataSource.getRepository(OrgPreference);
 const orgModuleAccessRepository = AppDataSource.getRepository(OrgModuleAccess);
 
@@ -526,7 +526,6 @@ Geef **uitsluitend** geldig JSON terug in het volgende formaat:
   },
 
   simplePrompt: async (prompt: string, model: string): Promise<string> => {
-    
     console.log("Prompt--->:", prompt);
     const completion = await openai.chat.completions.create({
       model: model,
@@ -534,8 +533,55 @@ Geef **uitsluitend** geldig JSON terug in het volgende formaat:
     });
     console.log("Completion--->:", completion.choices[0].message.content);
     return completion.choices[0].message.content || "No response from OpenAI";
+  },
+
+  translateContent: async (content: string): Promise<{results: { language: string, translation: string, original: string }[]}> => {
+    
+    const results: { language: string, translation: string, original: string }[] = [];
+
+    for (const prompt of translationPrompts.translationPrompts) {
+
+
+      const systemPrompt = prompt.language_prompt + `, 
+      Always answer in this JSON format 
+        {
+          "language": "language",
+          "original": "original text",
+          "translation": "translated text"
+        }`
+      const userPrompt = content 
+
+      console.log("SystemPrompt--->:", systemPrompt);
+      console.log("UserPrompt--->:", userPrompt);
+
+      const completion = await openai.chat.completions.create({
+        model: "o3",
+        response_format: { type: "json_object" },
+        messages: [
+          { 
+            role: "system", 
+            content: systemPrompt,
+          },
+          { 
+            role: "user", 
+            content: userPrompt,
+          }
+        ]
+      });
+
+      if (!completion.choices[0].message.content) {
+        throw new Error(`No translation generated for ${prompt.language}`);
+      }
+
+      results.push({
+        language: prompt.language,
+        translation: JSON.parse(completion.choices[0].message.content).translation,
+        original: JSON.parse(completion.choices[0].message.content).original
+      });
+    }
+
+    return { results };
   }
-  
 };
 
 export const aiGenerateServiceGemini = {
