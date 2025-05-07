@@ -7,9 +7,7 @@ import { OrgModuleAccess } from "../entities/OrgModuleAccess.js";
 import { Module } from "../entities/Module.js";
 import { databaseService } from "./databaseService.js";
 import { imagePayloadWithUrls, imagesWithDescription, imagesWithEmbeddings, imagesSearchEmbeddings } from "../types/types.js";
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
-const translationPrompts = require("./prompts.json");
+import { translationPrompts } from "./prompts.js";
 //Intiliase API keys for model providers
 const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY,});
 const gemini = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY,});
