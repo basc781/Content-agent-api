@@ -36,6 +36,9 @@ export class Module {
   @Column("boolean", { nullable: true })
   internetSearch!: boolean;
 
+  @Column("boolean", { nullable: true })
+  translation!: boolean;
+
   @Column({ type: "enum", enum: ["markdown", "json","emailHTML"], nullable: false })
   outputFormat!: string;
   

@@ -7,6 +7,7 @@ export interface ArticleFormData {
   potentialKeywords: string;
   datum: string;
   winkelvoorbeelden: string;
+  article?: string;
 }
 
 export interface form_check_input {

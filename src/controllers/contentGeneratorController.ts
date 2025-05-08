@@ -4,6 +4,7 @@ import { databaseService } from "../services/databaseService.js";
 import { contentPipelineService } from "../services/contentPipelineService.js";
 import { ArticleGenerationRequest } from "../types/types.js";
 import { getAuth } from "@clerk/express";
+import { translatePipelineService } from "../services/translatePipelineService.js";
 
 
 export const contentGeneratorController = {
@@ -66,14 +67,22 @@ export const contentGeneratorController = {
       console.log("This is the contentCalendar: ", contentCalendar);
       console.log("This is the request: ", request);
 
-      const article = await contentPipelineService.generateArticleContent(
-        orgId,
-        request.formData,
-        request.website || "",
-        contentCalendar.id,
-        request.imageUrls || [],
-        module,
-      );
+      
+      let article;
+
+      if (module.translation) {
+        if (!request.formData.article) {
+          res.status(400).json({ error: "Missing required fields: article" });
+          return;
+        }
+        console.log("DIT IS DE TRANSLATION PIPLEINE")
+        article = await translatePipelineService.translateArticle(  orgId,request.formData.article,contentCalendar.id,module);
+        
+      } else {
+        console.log("DIT IS DE CONTENT PIPLEINE")
+        article = await contentPipelineService.generateArticleContent(orgId,request.formData,request.website || "",contentCalendar.id,request.imageUrls || [],module,);
+        
+      }
 
       res.json({ article });
     } catch (error) {

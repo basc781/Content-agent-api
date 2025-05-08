@@ -547,7 +547,7 @@ Geef **uitsluitend** geldig JSON terug in het volgende formaat:
           "original": "original text",
           "translation": "translated text"
         }`
-      const userPrompt = content 
+      const userPrompt = JSON.stringify(content) 
 
       console.log("SystemPrompt--->:", systemPrompt);
       console.log("UserPrompt--->:", userPrompt);
