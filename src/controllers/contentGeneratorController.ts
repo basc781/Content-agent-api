@@ -185,6 +185,7 @@ export const contentRetrieverController = {
     req: Request,
     res: Response
   ): Promise<void> => {
+    console.log("ENDPOINT REACHED GETALLPUBLISHEDCONTENTCALENDARITEMS")
     try {
       console.log("Getting all published content calendar items");
 
