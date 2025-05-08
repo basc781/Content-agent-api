@@ -116,6 +116,27 @@ export const databaseService = {
 
     return contentItems;
   },
+  getAllPublishedContentCalendarItems: async (
+    orgId: string,
+
+  ): Promise<ContentCalendar[]> => {
+    const contentCalendarRepository =
+      AppDataSource.getRepository(ContentCalendar);
+
+    // Simple approach without complex selects
+    const contentItems = await contentCalendarRepository.find({
+      where: [
+        { status: "Writing....", orgId: orgId },
+        { status: "published", orgId: orgId },
+        { status: "Failed", orgId: orgId },
+      ],
+      relations: {
+        articles: true,
+      },
+    });
+
+    return contentItems;
+  },
   getUserPreferences: async (orgId: string): Promise<OrgPreference | null> => {
     const orgPreferenceRepository = AppDataSource.getRepository(OrgPreference);
 

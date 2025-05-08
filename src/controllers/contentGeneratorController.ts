@@ -180,6 +180,37 @@ export const contentRetrieverController = {
         .json({ error: "Failed to retrieve published content calendar items" });
     }
   },
+
+  getAllPublishedContentCalendarItems: async (
+    req: Request,
+    res: Response
+  ): Promise<void> => {
+    try {
+      console.log("Getting all published content calendar items");
+
+      const orgId = getAuth(req).orgId;
+
+      if (!orgId) {
+        res.status(401).json({ error: "Unauthorized" });
+        return;
+      }
+
+      await databaseService.updateContentCalendarStatus();
+
+      const publishedContentCalendarItems =
+        await databaseService.getAllPublishedContentCalendarItems(orgId);
+
+      res.json({ publishedContentCalendarItems });
+    } catch (error) {
+      console.error(
+        "Error retrieving all published content calendar items:",
+        error
+      );
+      res
+        .status(500)
+        .json({ error: "Failed to retrieve published content calendar items" });
+    }
+  },
   getArticleBySlug: async (req: Request, res: Response): Promise<void> => {
     try {
       const { pagepath } = req.params;

@@ -10,5 +10,6 @@ contentRouter.get("/calendar",contentRetrieverController.getPublishedContentCale
 contentRouter.get("/:pagepath", contentRetrieverController.getArticleBySlug);
 contentRouter.delete("/:id", contentGeneratorController.deleteCalendarItem);
 contentRouter.post("/translate", contentGeneratorController.translateArticle);
+contentRouter.get("/allCalendarItems", contentRetrieverController.getAllPublishedContentCalendarItems);
 
 contentRouter.post("/search", contentGeneratorController.searchArticles);
