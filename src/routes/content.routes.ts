@@ -3,13 +3,12 @@ import {contentGeneratorController,contentRetrieverController,} from "../control
 
 export const contentRouter = Router();
 
-contentRouter.post("/generate", contentGeneratorController.generateArticle);
+contentRouter.post("/generate", contentGeneratorController.generateContentItem);
 contentRouter.post("/validate", contentGeneratorController.checkFormData);
 contentRouter.get("/published",contentRetrieverController.getPublishedArticles);
 contentRouter.get("/calendar",contentRetrieverController.getPublishedContentCalendarItems);
 contentRouter.get("/:pagepath", contentRetrieverController.getArticleBySlug);
 contentRouter.delete("/:id", contentGeneratorController.deleteCalendarItem);
-contentRouter.post("/translate", contentGeneratorController.translateArticle);
 contentRouter.get("/allCalendarItems", contentRetrieverController.getAllPublishedContentCalendarItems);
 
 contentRouter.post("/search", contentGeneratorController.searchArticles);

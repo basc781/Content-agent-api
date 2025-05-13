@@ -9,61 +9,38 @@ import { databaseService } from "../services/databaseService.js";
 export const imagesController = {
 
   getUploadUrls: async (req: Request, res: Response): Promise<void> => {
-    try {
-      console.log("Getting upload URLs - Request received", req.body);
-      const orgId = getAuth(req).orgId;
-      
-      if (!orgId) {
-        console.log("Error: Unauthorized - No organization ID");
-        res.status(401).json({ error: "Unauthorized" });
-        return;
-      }
-
-      const imagesToUpload = req.body;
-
-      const imagesWithUrls = await analyseImageService.generateAuthenticatedUrls(imagesToUpload);
-      console.log("Images with URLs:", imagesWithUrls);
-      res.json({ images: imagesWithUrls.images });
-
-    } catch (error) {
-      console.error("Error getting upload URLs:", error);
-      res.status(500).json({ error: "Failed to get upload URLs" });
+    const orgId = getAuth(req).orgId;
+    if (!orgId) {
+      console.log("Error: Unauthorized - No organization ID");
+      res.status(401).json({ error: "Unauthorized" });
+      return;
     }
+    const imagesToUpload = req.body;
+    if (!imagesToUpload) {
+      res.status(400).json({ error: "No images to upload" });
+      return;
+    }
+    const imagesWithUrls = await analyseImageService.generateAuthenticatedUrls(imagesToUpload);
+    res.status(200).json({ images: imagesWithUrls.images });
   },
- 
-
   generateMetadata: async (req: Request, res: Response): Promise<void> => {
-    try {
-      
-      console.log("Generating metadata - Request received");
-      const orgId = getAuth(req).orgId;
-      
-      if (!orgId) {
-        console.log("Error: Unauthorized - No organization ID");
-        res.status(401).json({ error: "Unauthorized" });
-        return;
-      }
+    const orgId = getAuth(req).orgId;
+    if (!orgId) {
+      console.log("Error: Unauthorized - No organization ID");
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
 
-      const body = req.body as GenerateMetadataRequest;
-   
-
-      const imagesToUpload: imagePayloadWithUrls = {
+    const body = req.body as GenerateMetadataRequest;
+    const imagesToUpload: imagePayloadWithUrls = {
         images: body.images
       };
       const orgModuleAccessId = body.accessId;
-      console.log("DIT IS DE ORG MODULE ACCESS ID", orgModuleAccessId);
 
-      res.json({ "response": "Successfully started generating metadata", "images": imagesToUpload.images });
+      res.status(200).json({ "response": "Successfully started generating metadata", "images": imagesToUpload.images });
 
       const imagesWithDescriptions: imagesWithDescription = await aiGenerateServiceOpenAI.generateImageDescription(imagesToUpload);
-
       const imagesWithEmbeddings: imagesWithEmbeddings = await aiGenerateServiceOpenAI.generateDescriptionEmbedding(imagesWithDescriptions);
-      
       await databaseService.saveImage(imagesWithEmbeddings, orgModuleAccessId);
-
-    } catch (error) {
-      console.error("Error generating metadata:", error);
-      res.status(500).json({ error: "Failed to start generating metadata" });
-    }
   }
 };

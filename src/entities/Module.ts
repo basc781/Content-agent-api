@@ -25,9 +25,6 @@ export class Module {
   webScraper!: boolean;
 
   @Column("boolean", { nullable: true })
-  images!: boolean;
-
-  @Column("boolean", { nullable: true })
   assetLibrary!: boolean;
 
   @Column("boolean", { nullable: true })
@@ -38,6 +35,9 @@ export class Module {
 
   @Column("boolean", { nullable: true })
   translation!: boolean;
+
+  @Column("text", { nullable: true })
+  scraperSources!: string;
 
   @Column({ type: "enum", enum: ["markdown", "json","emailHTML"], nullable: false })
   outputFormat!: string;

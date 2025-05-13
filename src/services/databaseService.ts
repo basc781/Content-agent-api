@@ -294,7 +294,7 @@ export const databaseService = {
     return relevantAssets;
   },
 
-  saveArticle: async (article: string, contentId: number, orgId: string, outputFormat: string): Promise<Article> => {
+  saveArticle: async (article: string, contentId: number, orgId: string, outputFormat: string): Promise<string> => {
  const articleRepository = AppDataSource.getRepository(Article);
     const contentRepository = AppDataSource.getRepository(ContentCalendar);
 
@@ -319,6 +319,6 @@ export const databaseService = {
     contentItem.status = "published";
     await contentRepository.save(contentItem);
 
-    return newArticle;
+    return newArticle.text;
   }
 };

@@ -1,66 +1,53 @@
-import FireCrawlApp from '@mendable/firecrawl-js';
+import FireCrawlApp, { ScrapeResponse }  from '@mendable/firecrawl-js';
+import { scrapedWebPages } from '../types/types';
 
 const app = new FireCrawlApp({apiKey: process.env.FIRECRAWL_API_KEY});
 
 export const scraperService = {
-    companyContext: async (url: string) => {
+    companyContext: async (url: string): Promise<string> => {
         try {
-            console.log("Starting to scrape website: ", url);
-            const scrapeResult = await app.scrapeUrl(url, {
-                formats: ["markdown"]
-            });
-            console.log("Scrape result: ", scrapeResult);
-            return scrapeResult;
+            const scrapeResult = await app.scrapeUrl(url, {formats: ["markdown"]}) as ScrapeResponse;
+            if (!scrapeResult.markdown) {
+                throw new Error("No markdown found in scrape result");
+            }
+            return scrapeResult.markdown;
         } catch (error) {
             console.error("Scraping error:", error);
             throw error;
         }
     },
-    articleContext: async (storeList: Array<Record<string, string>>) => {
+    articleContext: async (storeListUrls: string[]): Promise<scrapedWebPages[]> => {
         try {
-            console.log("Starting to scrape websites: ", storeList);
+            console.log("Starting to scrape websites: ", storeListUrls);
             const results = [];
 
-            for (const store of storeList) {
-                const [storeName, url] = Object.entries(store)[0];
+            for (const store of storeListUrls) {
+                const [webpageName, url] = Object.entries(store)[0];
                 try {
-                    console.log(`Scraping ${storeName} at ${url}`);
+                    console.log(`Scraping ${webpageName} at ${url}`);
                     
                     const scrapeResult = await app.scrapeUrl(url, {
                         formats: ["markdown"]
                     });
 
-                    console.log('Raw scrape result:', {
-                        store: storeName,
-                        resultType: typeof scrapeResult,
-                        resultStructure: Object.keys(scrapeResult || {}),
-                        rawResult: scrapeResult
-                    });
-
-                    const websiteContent = JSON.stringify(scrapeResult)
-                    console.log('Processed content:', {
-                        store: storeName,
-                        contentLength: websiteContent.length,
-                        contentPreview: websiteContent.substring(0, 200) + '...'
-                    });
+                    const websiteContent = JSON.stringify(scrapeResult) 
 
                     results.push({
-                        [storeName]: {
+                        [webpageName]: {
                             url: url,
                             content: websiteContent
                         }
                     });
 
-                    console.log(`Successfully scraped ${storeName}`);
                 } catch (error) {
-                    console.error(`Error scraping ${storeName}:`, {
+                    console.error(`Error scraping ${webpageName}:`, {
                         error,
                         type: typeof error,
                         message: (error as Error).message,
                         stack: (error as Error).stack
                     });
                     results.push({
-                        [storeName]: {
+                        [webpageName]: {
                             url: url,
                             error: `Failed to scrape: ${(error as Error).message}`
                         }
@@ -73,7 +60,7 @@ export const scraperService = {
             }
 
             console.log("Final results summary:", {
-                totalStores: storeList.length,
+                totalStores: storeListUrls.length,
                 successfulScrapes: results.filter(r => !Object.values(r)[0].error).length,
                 failedScrapes: results.filter(r => Object.values(r)[0].error).length
             });

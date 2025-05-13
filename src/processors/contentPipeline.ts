@@ -1,42 +1,34 @@
-import { scraperService } from "./scraperService.js";
-import { aiGenerateServiceGemini, aiGenerateServiceOpenAI } from "./aiGenerateService.js";
-import { databaseService } from "./databaseService.js";
+import { scraperService } from "../services/scraperService.js";
+import { aiGenerateServiceGemini, aiGenerateServiceOpenAI } from "../services/aiGenerateService.js";
+import { databaseService } from "../services/databaseService.js";
 import { Module } from "../entities/Module.js";
-import { imagesSearchEmbeddings } from "../types/types.js";
+import { imagesSearchEmbeddings, contentItemContext } from "../types/types.js";
+import { formData } from "../types/types.js";
 
 export const contentPipelineService = {
-  /**
-   * Generate article content through a configurable pipeline
-   */
   generateArticleContent: async (
     orgId: string,
-    formData: any,
-    website: string,
+    formData: formData,
     contentCalendarId: number,
-    imageUrls: string[] | string,
     module: Module
-  ) => {
+  ): Promise<string> => {
+    
     try {
-      // Convert imageUrls to array if it's a string
-      const imageUrlsArray =
-        typeof imageUrls === "string"
-          ? imageUrls.split(",").map((url) => url.trim())
-          : imageUrls || [];
-
       // Initialize context
-      let context: any = {
-        formData,
-        contentCalendarId,
-        availableStores: [],
-        filteredStores: [],
-        articleContext: null,
-        summarizedContext: null,
-        draftArticle: null,
+      let context: contentItemContext = {
+        formData: formData,
+        contentCalendarId: contentCalendarId,
+        availableStores: "",
+        filteredStoresUrls: [],
+        scrapedWebPages: [],
+        summarizedContext: [],
+        draftArticle: "",
         module: module,
-        internetSearch: null
+        internetSearch: "",
+        nearestNeighborEmbeddings:[],
+        relevantAssets:[],
+        finalArticle:""
       };
-
-
 
       if (module.internetSearch) {
         console.log("Internet search enabled, starting internet search");
@@ -49,29 +41,28 @@ export const contentPipelineService = {
       }  
       // Check if websiteScraping is enabled
       if (module.webScraper) {
-        console.log("Starting to scrape website:", website);
-        context.availableStores = await scraperService.companyContext(website);
+        console.log("Scraper sources: ", module.scraperSources);
+        // Step 1: We scrape a Markdown file of the url that is saved in the database to be scraped for context
+        context.availableStores = await scraperService.companyContext(module.scraperSources);
         console.log(
           "Starting filter process with available stores: ",
           context.availableStores
         );
-
-        // Step 2: Generate filtered store list
-        context.filteredStores = await aiGenerateServiceOpenAI.generateStoreList(
+        // Step 2: Generate a string array of all the url's that possibly have relevant context. 
+        // Done by sending markdown to AI with a prompt.
+        context.filteredStoresUrls = await aiGenerateServiceOpenAI.generateStoreList(
           contentCalendarId,
-          JSON.stringify(context.availableStores)
+          context.availableStores
         );
-        console.log("Filtered store list: ", context.filteredStores);
 
-        // Step 3: Get article context by scraping filtered stores
-        context.articleContext = await scraperService.articleContext(
-          context.filteredStores
-        );
-        console.log("Article context: ", context.articleContext);
+        // Step 3: Scraping all url's that could have relevant context. from step 2. 
+        // Markdown of page is scraped and a entire Markdown string of the page is saved the scrapedWebPages object.
+        context.scrapedWebPages = await scraperService.articleContext(context.filteredStoresUrls);
 
-        // Step 4: Summarize article context (moved inside the websiteScraping condition)
+        // Step 4: The markdown content is to much to use as context in the prompt. Therefore we summarize every markdown file/string.
+        //This than is being saved as summary in the summarizedContext object together with the .
         context.summarizedContext = await aiGenerateServiceOpenAI.summarizeArticle(
-          context.articleContext,
+          context.scrapedWebPages,
           formData,
           orgId,
           module
@@ -83,16 +74,12 @@ export const contentPipelineService = {
         console.log(
           "Web scraping disabled in user preferences, skipping related steps"
         );
-        // Provide fallback context when scraping is disabled
-        context.articleContext = { basicInfo: formData };
       }
 
-
-      // Step 5: Generate final article (always runs)
+      // Step 5: Generate a first version of the article. This is neccesary to find relevant images and possibly do any checks.
       context.draftArticle = await aiGenerateServiceOpenAI.generateArticle(
         context.summarizedContext, // Use summarized if available, otherwise use article context
         contentCalendarId,
-        imageUrlsArray,
         orgId,
         module,
         context.internetSearch
@@ -104,14 +91,10 @@ export const contentPipelineService = {
   
         console.log("Asset library enabled, generating asset library");
         
-        const nearestNeighborEmbedding = await aiGenerateServiceOpenAI.generateNearestNeighborEmbedding(context.draftArticle) as imagesSearchEmbeddings[];
-        context.nearestNeighborEmbeddings = nearestNeighborEmbedding as imagesSearchEmbeddings[];
+        context.nearestNeighborEmbeddings = await aiGenerateServiceOpenAI.generateNearestNeighborEmbedding(context.draftArticle);
         
-        const relevantAssets = await databaseService.getRelevantAssets(context.module, orgId, context.nearestNeighborEmbeddings as imagesSearchEmbeddings[]);
-        const assetUrls = relevantAssets.map(paragraph => paragraph.assets?.[0] ? process.env.R2_PUBLIC_URL + "/" + paragraph.assets[0].uniqueFilename : null).filter(url => url !== null);
-
-        console.log("Asset URLs: ", assetUrls);
-        imageUrlsArray.push(...assetUrls);
+        context.relevantAssets = await databaseService.getRelevantAssets(context.module, orgId, context.nearestNeighborEmbeddings);
+        const assetUrls = context.relevantAssets.map(paragraph => paragraph.assets?.[0] ? process.env.R2_PUBLIC_URL + "/" + paragraph.assets[0].uniqueFilename : null).filter(url => url !== null);
 
         const finalPrompt = `
         We hebben een draft artikel geschreven en daar achteraf afbeeldingen bij gevonden. Aan jouw de taak om in markdown annotatie de afbeeldingen toe te voegen aan het artikel. belangrijk is dat je dit op de relevante plekken doet.
@@ -120,7 +103,8 @@ export const contentPipelineService = {
         ${context.draftArticle}
 
         ------ Hieronder vind je de afbeeldingen -------  :
-        ${JSON.stringify(imageUrlsArray)}`
+        ${JSON.stringify(assetUrls)}`
+
         context.finalArticle = await aiGenerateServiceOpenAI.simplePrompt(finalPrompt,"o1");
       }else{
         console.log("Asset library disabled, skipping asset library");

@@ -37,20 +37,25 @@ if (process.env.ENVIRONMENT !== "localhost") {
 
 const initializeDatabase = async () => {
   try {
+    console.log("=== Starting Database Initialization ===");
     await AppDataSource.initialize();
-    console.log("Database connected");
+    console.log("Database connected successfully");
 
-    // Create vector extension
+    console.log("Initializing vector extension...");
     await AppDataSource.query('CREATE EXTENSION IF NOT EXISTS vector');
     console.log("Vector extension initialized");
 
     app.use("/api", routes);
+    console.log("Routes setup complete");
 
     app.listen(port, () => {
       console.log(`Server running at http://localhost:${port}`);
     });
   } catch (error) {
-    console.error("Database initialization error:", error);
+    console.error("=== Database Error ===");
+    console.error("Error type:", error instanceof Error ? error.constructor.name : typeof error);
+    console.error("Error message:", error instanceof Error ? error.message : error);
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");
     process.exit(1);
   }
 };

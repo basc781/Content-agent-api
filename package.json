@@ -2,10 +2,13 @@
   "name": "actiesseoapi",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "dev": "nodemon --watch 'src/**/*.ts' --exec 'NODE_OPTIONS=\"--loader ts-node/esm --require dotenv/config\" ts-node' src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "lint": "eslint . --ext .ts --config eslint.config.js",
+    "lint:fix": "eslint . --ext .ts --fix --config eslint.config.js"
   },
   "engines": {
     "node": ">=20.0.0"
@@ -41,13 +44,16 @@
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22.13.4",
     "@types/uuid": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.32.0",
+    "@typescript-eslint/parser": "^8.32.0",
+    "eslint": "^9.26.0",
+    "eslint-plugin-import": "^2.31.0",
     "nodemon": "^3.1.9",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
   },
   "keywords": [],
   "description": "",
-  "type": "module",
   "ts-node": {
     "esm": true,
     "experimentalSpecifierResolution": "node"

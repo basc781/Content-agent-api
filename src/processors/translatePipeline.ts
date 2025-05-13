@@ -1,6 +1,6 @@
-import { scraperService } from "./scraperService.js";
-import { aiGenerateServiceGemini, aiGenerateServiceOpenAI } from "./aiGenerateService.js";
-import { databaseService } from "./databaseService.js";
+import { scraperService } from "../services/scraperService.js";
+import { aiGenerateServiceGemini, aiGenerateServiceOpenAI } from "../services/aiGenerateService.js";
+import { databaseService } from "../services/databaseService.js";
 import { Module } from "../entities/Module.js";
 import { imagesSearchEmbeddings } from "../types/types.js";
 

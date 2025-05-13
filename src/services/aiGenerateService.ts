@@ -6,8 +6,9 @@ import { OrgPreference } from "../entities/OrgPreferences.js";
 import { OrgModuleAccess } from "../entities/OrgModuleAccess.js";
 import { Module } from "../entities/Module.js";
 import { databaseService } from "./databaseService.js";
-import { imagePayloadWithUrls, imagesWithDescription, imagesWithEmbeddings, imagesSearchEmbeddings } from "../types/types.js";
+import { imagePayloadWithUrls, imagesWithDescription, imagesWithEmbeddings, imagesSearchEmbeddings, scrapedWebPagesSummarized, scrapedWebPages } from "../types/types.js";
 import { translationPrompts } from "./prompts.js";
+import { formData } from "../types/types.js";
 //Intiliase API keys for model providers
 const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY,});
 const gemini = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY,});
@@ -87,7 +88,7 @@ export const aiGenerateServiceOpenAI = {
     // Save to database
     return await contentRepository.save(parsedContent);
   },
-  generateStoreList: async (contentId: number, availableStores: string) => {
+  generateStoreList: async (contentId: number, availableStores: string): Promise<string[]> => {
     console.log(`Starting generateStoreList for contentId: ${contentId}`);
 
     const contentItem = await contentRepository.findOneBy({ id: contentId });
@@ -173,78 +174,59 @@ export const aiGenerateServiceOpenAI = {
     }
   },
   summarizeArticle: async (
-    articleContext: Array<Record<string, any>>,
-    formData: string,
+    articleContext: scrapedWebPages[],
+    formData: formData,
     orgId: string,
     module: Module
-  ) => {
+  ): Promise<scrapedWebPagesSummarized[]> => {
     for (const store of articleContext) {
       const [storeName, data] = Object.entries(store)[0];
       try {
-        // Parse the JSON content string
-        const parsedContent = JSON.parse(data.content);
-        const orgModuleAccess = await orgModuleAccessRepository.findOneBy({
-          orgId: orgId,
-          moduleId: module.id,
-        });
+        // Type guard to check if it's a content object
+        if ('content' in data) {
+          const parsedContent = JSON.parse(data.content);
+          const orgModuleAccess = await orgModuleAccessRepository.findOneBy({
+            orgId: orgId,
+            moduleId: module.id,
+          });
 
-        const prompt = `${orgModuleAccess?.summaryPrompt}
-        ----- BEGIN FORM DATA ----- ${JSON.stringify(formData)} ----- END FORM DATA ----- 
-        
-        ----- BEGIN background information ----- ${JSON.stringify(parsedContent)} ----- END background information -----`;
+          const prompt = `${orgModuleAccess?.summaryPrompt}
+          ----- BEGIN FORM DATA ----- ${JSON.stringify(formData)} ----- END FORM DATA ----- 
+          
+          ----- BEGIN background information ----- ${JSON.stringify(parsedContent)} ----- END background information -----`;
 
-        console.log("Prompt--->:", prompt);
+          const completion = await openai.chat.completions.create({
+            messages: [{ role: "user", content: prompt }],
+            model: "gpt-4o",
+            response_format: { type: "json_object" },
+          });
 
-        const completion = await openai.chat.completions.create({
-          messages: [
-            {
-              role: "user",
-              content: prompt,
-            },
-          ],
-          model: "gpt-4o",
-          response_format: { type: "json_object" },
-        });
+          const summary = JSON.parse(completion.choices[0].message.content || "{}").information;
 
-        const summary = JSON.parse(
-          completion.choices[0].message.content || "{}"
-        ).information;
+          if (!summary) {
+            throw new Error("No summary found");
+          }
 
-        console.log("Summary--->:", summary);
-
-        if (!summary) {
-          throw new Error("No summary found");
+          // Now TypeScript knows this is a content object
+          (data as { content: string; summary?: any }).summary = summary;
         }
-
-        // Add summary directly to the store object
-        store[storeName].summary = summary;
       } catch (error) {
         console.error(`Error processing ${storeName}:`, error);
-        store[storeName].summary = {
-          error: `Failed to process: ${(error as Error).message}`,
-        };
+        // Handle error case
+        (data as { error: string }).error = `Failed to process: ${(error as Error).message}`;
       }
     }
 
-    return articleContext;
+    return articleContext as scrapedWebPagesSummarized[];
   },
   generateArticle: async (
     articleContext: Array<Record<string, any>> | any,
     contentId: number,
-    imageUrls: Array<string>,
     orgId: string,
     module: Module,
     internetSearch: string
-  ) => {
-    console.log("Input context size:", JSON.stringify(articleContext).length);
-    console.log("Input context type:", typeof articleContext);
-
+  ): Promise<string> => {
     // Add null check before using Object.keys
-    console.log(
-      "Input context structure:",
-      articleContext ? Object.keys(articleContext) : "No context available"
-    );
-
     const orgPreference = await orgPreferenceRepository.findOneBy({
       orgId: orgId,
     });
@@ -256,8 +238,6 @@ export const aiGenerateServiceOpenAI = {
     if (!contentItem) {
       throw new Error("No content item found for the provided ID");
     }
-    console.log("Content item:", contentItem);
-
     // Filter only essential data if websiteScraping is enabled
     const contextForPrompt = module.webScraper && Array.isArray(articleContext) && articleContext
         ? articleContext.map((store) => {
@@ -307,12 +287,7 @@ export const aiGenerateServiceOpenAI = {
         ----- Einde instructies -----
         
         Belangrijk is dat je ALTIJD in ${outputFormat} format reageerd. Voeg nooit de '''markdown''' of '''emailHTML''' tags toe en probeer NOOT TABLES TE MAKEN.
-        
-        ----- Assets die je kunt gebruiken -----
-        Voeg deze toe aan relevante plekken in het artikel. Probeer ze tussen de subkoppen door te plaatsen:
-        ${JSON.stringify(imageUrls)}
-        Als er geen assets zijn, hoef je ze niet te gebruiken.
-
+      
         ----- Extra Context -----        
         If there is extra content always try to add links to the content. The urls are defined as "url" in the context.
 
@@ -333,8 +308,11 @@ export const aiGenerateServiceOpenAI = {
       model: "o3",
     });
 
+    if (!completion.choices[0].message.content) {
+      throw new Error("No content generated by OpenAI");
+    }
+
     const article = completion.choices[0].message.content;
-    console.log("Generated article:", article);
 
     // const newArticle = new Article();
     // newArticle.text = article || "";
@@ -462,7 +440,7 @@ Voor iedere paragraaf of subkop in het onderstaande artikel maak je **één** be
 ("beschrijving_afbeelding") van het ideale beeld.
 
 🔍 **Specifiek zijn is verplicht**  
-– Noem expliciet bloem‑ of plantensoorten (Nederlandse én/of Latijnse naam).  
+– Noem expliciet bloem‑of plantensoorten (Nederlandse én/of Latijnse naam).  
 – Beschrijf dominante of contrasterende kleuren.  
 – Vermeld setting/omgeving (kas, weide, huiskamer, studio, etc.).  
 – Benoem perspectief of camerastandpunt (macro, flatlay, close‑up).  
