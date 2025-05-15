@@ -5,19 +5,20 @@ import { OrgPreference } from "../entities/OrgPreferences.js";
 import { Module } from "../entities/Module.js";
 import { OrgModuleAccess } from "../entities/OrgModuleAccess.js";
 import { Image } from "../entities/images.js";
-import { imagesSearchEmbeddings, imagesWithEmbeddings } from "../types/types.js";
-import pgvector from 'pgvector';
+import {
+  formData,
+  imagesSearchEmbeddings,
+  imagesWithEmbeddings,
+} from "../types/types.js";
+import pgvector from "pgvector";
 import { moduleService } from "./moduleService.js";
 
 export const databaseService = {
-
   deleteContentCalendar: async (id: number) => {
     const contentCalendarRepository = AppDataSource.getRepository(ContentCalendar);
     const articleRepository = AppDataSource.getRepository(Article);
-
     // Update the status of the content calendar to "deleted"
     await contentCalendarRepository.update(id, { status: "deleted" });
-
     // Update the status of all related articles to "deleted"
     await articleRepository.update({ contentCalendarId: id }, { status: "deleted" });
   },
@@ -25,7 +26,6 @@ export const databaseService = {
   updateContentCalendarStatus: async () => {
     const contentCalendarRepository = AppDataSource.getRepository(ContentCalendar);
     const articleRepository = AppDataSource.getRepository(Article);
-
     // Get content calendars that are in "Writing...." status
     const contentCalendars = await contentCalendarRepository.find({
       where: { status: "Writing...." },
@@ -36,7 +36,6 @@ export const databaseService = {
 
     // Calculate the timestamp for 30 minutes ago
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-
     // Filter and update content calendars older than 30 minutes
     const failedCalendars = contentCalendars.filter(
       (calendar) => calendar.dateCreated < thirtyMinutesAgo
@@ -55,25 +54,20 @@ export const databaseService = {
         .map((article) => article.id);
 
       if (articleIds.length > 0) {
-        await articleRepository.update(
-          articleIds,
-          { status: "Failed" }
-        );
+        await articleRepository.update(articleIds, { status: "Failed" });
       }
     }
   },
 
   createContentCalendar: async (
-    formData: any,
+    formData: formData,
     orgId: string,
-    titel: string,
     moduleId: number
   ): Promise<ContentCalendar> => {
-    const contentCalendarRepository =
-      AppDataSource.getRepository(ContentCalendar);
+    const contentCalendarRepository = AppDataSource.getRepository(ContentCalendar);
 
     const contentCalendar = contentCalendarRepository.create({
-      title: titel,
+      title: formData.titel,
       orgId: orgId,
       formData: formData,
       status: "Writing....",
@@ -85,7 +79,6 @@ export const databaseService = {
   },
   getPublishedArticles: async (): Promise<Article[]> => {
     const articleRepository = AppDataSource.getRepository(Article);
-
     // Find all articles that are linked to published content calendars
     const articles = await articleRepository
       .createQueryBuilder("article")
@@ -99,8 +92,7 @@ export const databaseService = {
     orgId: string,
     moduleId: number
   ): Promise<ContentCalendar[]> => {
-    const contentCalendarRepository =
-      AppDataSource.getRepository(ContentCalendar);
+    const contentCalendarRepository = AppDataSource.getRepository(ContentCalendar);
 
     // Simple approach without complex selects
     const contentItems = await contentCalendarRepository.find({
@@ -117,11 +109,9 @@ export const databaseService = {
     return contentItems;
   },
   getAllPublishedContentCalendarItems: async (
-    orgId: string,
-
+    orgId: string
   ): Promise<ContentCalendar[]> => {
-    const contentCalendarRepository =
-      AppDataSource.getRepository(ContentCalendar);
+    const contentCalendarRepository = AppDataSource.getRepository(ContentCalendar);
 
     // Simple approach without complex selects
     const contentItems = await contentCalendarRepository.find({
@@ -134,22 +124,18 @@ export const databaseService = {
         articles: true,
       },
     });
-
     return contentItems;
   },
   getUserPreferences: async (orgId: string): Promise<OrgPreference | null> => {
     const orgPreferenceRepository = AppDataSource.getRepository(OrgPreference);
-
     const orgPreference = await orgPreferenceRepository.findOne({
       where: { orgId },
     });
-
     return orgPreference;
   },
 
   getOrgModules: async (orgId: string): Promise<(Module & { accessId?: number })[]> => {
     const moduleRepository = AppDataSource.getRepository(Module);
-
     const modules = await moduleRepository
       .createQueryBuilder("module")
       .innerJoin("org_module_access", "access", "access.moduleId = module.id")
@@ -162,14 +148,13 @@ export const databaseService = {
       const raw = modules.raw[index];
       return {
         ...entity,
-        accessId: raw.accessId
+        accessId: raw.accessId,
       };
     });
   },
 
-  getModuleById: async (orgId: string,moduleId: number): Promise<Module | null> => {
+  getModuleById: async (orgId: string, moduleId: number): Promise<Module> => {
     const moduleRepository = AppDataSource.getRepository(Module);
-
     const module = await moduleRepository
       .createQueryBuilder("module")
       .innerJoin("org_module_access", "access", "access.moduleId = module.id")
@@ -177,13 +162,13 @@ export const databaseService = {
       .andWhere("module.id = :moduleId", { moduleId })
       .getOne();
 
+    if (!module) {
+      throw new Error("Module not found");
+    }
     return module;
   },
 
-  getPromptByModuleAndOrgId: async (
-    moduleId: number,
-    orgId: string
-  ): Promise<string | null> => {
+  getPromptByModuleAndOrgId: async (moduleId: number, orgId: string): Promise<string> => {
     const promptRepository = AppDataSource.getRepository(OrgModuleAccess);
 
     const prompt = await promptRepository.findOne({
@@ -193,17 +178,16 @@ export const databaseService = {
       },
     });
 
-    return prompt?.prompt ?? null;
+    if (!prompt) {
+      throw new Error("Prompt not found");
+    }
+    return prompt.prompt;
   },
 
   getArticleBySlug: async (
     slug: string,
     orgId: string
-  ): Promise<{
-    title: string;
-    text: string;
-    createdAt: Date;
-  } | null> => {
+  ): Promise<{ title: string; text: string; createdAt: Date; outputFormat: string }> => {
     try {
       const articleRepository = AppDataSource.getRepository(Article);
       const article = await articleRepository.findOne({
@@ -216,18 +200,20 @@ export const databaseService = {
         },
       });
 
-      console.log(article);
+      if (!article) {
+        throw new Error("Article not found with slug: " + slug + " for orgId: " + orgId);
+      }
+      if (!article.contentCalendar || typeof article.contentCalendar.title !== "string") {
+        throw new Error("Article found but not complete");
+      }
 
-      const object = article
-        ? {
-            title: article.contentCalendar?.title ?? "",
-            text: article.text,
-            createdAt: article.createdAt,
-            outputFormat: article.outputFormat,
-          }
-        : null;
+      const object = {
+        title: article.contentCalendar.title,
+        text: article.text,
+        createdAt: article.createdAt,
+        outputFormat: article.outputFormat,
+      };
 
-      console.log(object);
       return object;
     } catch (error) {
       console.error("Error getting article by slug:", error);
@@ -235,24 +221,14 @@ export const databaseService = {
     }
   },
 
-  getImageByUrl: async (imageUrl: string): Promise<Image | null> => {
-    try {
-      const imageRepository = AppDataSource.getRepository(Image);
-      return await imageRepository.findOne({ 
-        where: { authenticatedUrl: imageUrl } 
-      });
-    } catch (error) {
-      console.error("Error getting image by URL:", error);
-      return null;
-    }
-  },
-
-  saveImage: async (imageData: imagesWithEmbeddings, orgModuleAccessId: number): Promise<Image[]> => {
-    console.log("DIT IS DE IMAGE DATA", orgModuleAccessId);
+  saveImage: async (
+    imageData: imagesWithEmbeddings,
+    orgModuleAccessId: number
+  ): Promise<Image[]> => {
     try {
       const imageRepository = AppDataSource.getRepository(Image);
       // Create and save all images in the array
-      const imagesToSave = imageData.images.map((img) => 
+      const imagesToSave = imageData.images.map((img) =>
         imageRepository.create({
           filename: img.filename,
           uniqueFilename: img.uniqueFilename,
@@ -260,10 +236,10 @@ export const databaseService = {
           description: img.description,
           contentType: img.contentType,
           orgModuleAccessId: orgModuleAccessId,
-          embedding: pgvector.toSql(img.embedding)
+          embedding: pgvector.toSql(img.embedding),
         })
       );
-      
+
       return await imageRepository.save(imagesToSave);
     } catch (error) {
       console.error("Error saving images:", error);
@@ -271,33 +247,44 @@ export const databaseService = {
     }
   },
 
-  getRelevantAssets: async (module: Module, orgId: string, nearestNeighborEmbeddings: imagesSearchEmbeddings[]): Promise<imagesSearchEmbeddings[]> => {
-    const imageRepository = AppDataSource.getRepository(Image);
-    
-    const ModuleWithAccessId = await moduleService.getModuleBySlug(orgId, module.slug);
-    const accessid = ModuleWithAccessId?.orgModuleAccess[0].id;
+  getRelevantAssets: async (
+    module: Module,
+    orgId: string,
+    nearestNeighborEmbeddings: imagesSearchEmbeddings[]
+  ): Promise<imagesSearchEmbeddings[]> => {
+    try {
+      const imageRepository = AppDataSource.getRepository(Image);
+      const ModuleWithAccessId = await moduleService.getModuleBySlug(orgId, module.slug);
+      const accessid = ModuleWithAccessId?.orgModuleAccess[0].id;
+      const relevantAssets = [...nearestNeighborEmbeddings];
 
-    const relevantAssets = [...nearestNeighborEmbeddings];
-    
-    for (const embedding of nearestNeighborEmbeddings) {
-      const assets = await imageRepository
-        .createQueryBuilder("image")
-        .orderBy('image.embedding::vector <-> :embedding::vector', 'ASC')
-        .setParameters({embedding: pgvector.toSql(embedding.searchEmbedding)})
-        .where("image.orgModuleAccessId = :accessid", { accessid })
-        .limit(1)
-        .getMany();
-        
-      console.log("Assets--->:", assets);
-      embedding.assets = assets;
+      for (const embedding of nearestNeighborEmbeddings) {
+        const assets = await imageRepository
+          .createQueryBuilder("image")
+          .orderBy("image.embedding::vector <-> :embedding::vector", "ASC")
+          .setParameters({ embedding: pgvector.toSql(embedding.searchEmbedding) })
+          .where("image.orgModuleAccessId = :accessid", { accessid })
+          .limit(1)
+          .getMany();
+
+        console.log("Assets--->:", assets);
+        embedding.assets = assets;
+      }
+      return relevantAssets;
+    } catch (error) {
+      console.error("Error getting relevant assets:", error);
+      throw new Error("Failed to find relevant assets in asset library");
     }
-    return relevantAssets;
   },
 
-  saveArticle: async (article: string, contentId: number, orgId: string, outputFormat: string): Promise<string> => {
- const articleRepository = AppDataSource.getRepository(Article);
+  saveArticle: async (
+    article: string,
+    contentId: number,
+    orgId: string,
+    outputFormat: string
+  ): Promise<string> => {
+    const articleRepository = AppDataSource.getRepository(Article);
     const contentRepository = AppDataSource.getRepository(ContentCalendar);
-
     const contentItem = await contentRepository.findOneBy({ id: contentId });
     if (!contentItem) {
       throw new Error("No content item found for the provided ID");
@@ -320,5 +307,5 @@ export const databaseService = {
     await contentRepository.save(contentItem);
 
     return newArticle.text;
-  }
+  },
 };

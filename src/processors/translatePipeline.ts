@@ -1,45 +1,33 @@
-import { scraperService } from "../services/scraperService.js";
-import { aiGenerateServiceGemini, aiGenerateServiceOpenAI } from "../services/aiGenerateService.js";
+import { aiGenerateServiceOpenAI } from "../services/aiGenerateService.js";
 import { databaseService } from "../services/databaseService.js";
 import { Module } from "../entities/Module.js";
-import { imagesSearchEmbeddings } from "../types/types.js";
+import { formData, translateItemContext } from "../types/types.js";
 
 export const translatePipelineService = {
-  /**
-   * Generate article content through a configurable pipeline
-   */
-  translateArticle: async (
-    orgId: string,
-    formData: any,
-    contentCalendarId: number,
-    module: Module
-  ) => {
+  translateArticle: async (orgId: string, formData: formData, contentCalendarId: number, module: Module) => {
     try {
-
       // Initialize context
-      let context: any = {
-        formData,
-        contentCalendarId,
-        availableStores: [],
-        filteredStores: [],
-        articleContext: null,
-        summarizedContext: null,
-        draftArticle: null,
+      const context: translateItemContext = {
+        orgId: orgId,
+        formData: formData,
+        contentCalendarId: contentCalendarId,
         module: module,
-        internetSearch: null
+        finalContentItem: {
+          results: [],
+        },
       };
-      
-      
 
-      context.finalArticle = await aiGenerateServiceOpenAI.translateContent(formData)
-      
-      //step 7: save the article to the database  
-      const savedArticle = await databaseService.saveArticle(context.finalArticle, contentCalendarId, orgId, module.outputFormat);
-      //
+      if (!formData.article || typeof formData.article !== "string") {
+        throw new Error("Content needs to be send as .article in the formData");
+      }
+
+      context.finalContentItem = await aiGenerateServiceOpenAI.translateContent(formData.article);
+      //step 7: save the article to the database
+      const savedArticle = await databaseService.saveArticle(JSON.stringify(context.finalContentItem), contentCalendarId, orgId, module.outputFormat);
 
       return savedArticle;
     } catch (error) {
-      console.error("Error in content pipeline:", error);
+      console.error("Error in translate pipeline:", error);
       throw error;
     }
   },

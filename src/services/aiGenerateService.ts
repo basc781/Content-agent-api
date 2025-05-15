@@ -6,12 +6,12 @@ import { OrgPreference } from "../entities/OrgPreferences.js";
 import { OrgModuleAccess } from "../entities/OrgModuleAccess.js";
 import { Module } from "../entities/Module.js";
 import { databaseService } from "./databaseService.js";
-import { imagePayloadWithUrls, imagesWithDescription, imagesWithEmbeddings, imagesSearchEmbeddings, scrapedWebPagesSummarized, scrapedWebPages } from "../types/types.js";
+import { imagePayloadWithUrls, imagesWithDescription, imagesWithEmbeddings, imagesSearchEmbeddings, scrapedWebPages } from "../types/types.js";
 import { translationPrompts } from "./prompts.js";
 import { formData } from "../types/types.js";
 //Intiliase API keys for model providers
-const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY,});
-const gemini = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY,});
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const gemini = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const contentRepository = AppDataSource.getRepository(ContentCalendar);
 const orgPreferenceRepository = AppDataSource.getRepository(OrgPreference);
@@ -20,84 +20,12 @@ const orgModuleAccessRepository = AppDataSource.getRepository(OrgModuleAccess);
 export const aiGenerateServiceOpenAI = {
   // Generate a content calender for a company of which you have all necessary information. The calender structure is
   // hardcoded and the only variables in this version is the specific company and information about the company.
-  generateCalender: async (
-    companyInfo: string,
-    date: string,
-    scrapeResult: string
-  ) => {
-    const prompt = `
-            Generate 20 SEO content ideas for:
-            -------------   COMPANY INFO  -------------
-            Company context: ${companyInfo}
-            -------------   SHOPS LIST  -------------
-            Available shops: ${JSON.stringify(scrapeResult)}
-            -------------   DATE  -------------
-            Current date: ${date}. Make sure to ONLY generate idea's for the future. This can be days/weeks or 1 or 2 months from now. NEVER generate idea's for the past.
-            -------------   SEASONAL EVENTS, HOLIDAYS, AND CURRENT TRENDS  -------------
-            Consider seasonal events, holidays, and current trends.
-            -------------   FORMAT  -------------
-            Format each idea as: Title | Event | Description
-
-            Make sure the idea's are aimed at SEO and not just random content. It needs to fit search patterns of regular users. 
-
-            Zorg ervoor dat de categorie winkels bevat die actie.nl ook echt op de website heeft.
-
-            Always answer in the followingJSON format.:
-            {
-                "ideas": [
-                    {
-                        "title": "Title of the content",
-                        "event": "Event of the content",
-                        "description": "Description of the content",
-                        "status": "draft",
-                        "potential_keywords": "Potential keywords of the content",
-                        "search_potential": "Score between 1 and 10 based on search potential",
-                        "winkel_voorbeelden": "Winkel voorbeelden of winkels die actie.nl ook echt op de website heeft",
-                        "date": "Date of the content"
-                    }
-                ]
-            }
-        `;
-
-    const completion = await openai.chat.completions.create({
-      messages: [{ role: "user", content: prompt }],
-      model: "o1",
-      response_format: { type: "json_object" },
-    });
-
-    if (!completion.choices[0].message.content) {
-      throw new Error("No content generated");
-    }
-
-    const content = JSON.parse(completion.choices[0].message.content);
-    console.log("Parsed content:", content);
-    // Access the ideas array from the content
-    const contentItems = content.ideas || [];
-    const parsedContent = contentItems.map((item: any) => ({
-      title: item.title || "",
-      event: item.event || "",
-      description: item.description || "",
-      status: item.status || "draft",
-      potential_keywords: item.potential_keywords || "",
-      search_potential: item.search_potential || "",
-      winkel_voorbeelden: item.winkel_voorbeelden || "",
-      date: item.date || "",
-    }));
-
-    console.log("Formatted content for database:", parsedContent);
-    // Save to database
-    return await contentRepository.save(parsedContent);
-  },
   generateStoreList: async (contentId: number, availableStores: string): Promise<string[]> => {
-    console.log(`Starting generateStoreList for contentId: ${contentId}`);
-
     const contentItem = await contentRepository.findOneBy({ id: contentId });
     if (!contentItem) {
       console.error(`No content item found for contentId: ${contentId}`);
       throw new Error("No content item found for the provided ID");
     }
-
-    console.log(`Found content item: ${contentItem.title}`);
 
     const prompt = `
             
@@ -121,15 +49,10 @@ export const aiGenerateServiceOpenAI = {
             }
         `;
 
-    console.log("Sending prompt to OpenAI...");
-
     try {
       // Add timeout and retry logic
       const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(
-          () => reject(new Error("OpenAI API timeout after 3 minutes")),
-          180000
-        );
+        setTimeout(() => reject(new Error("OpenAI API timeout after 3 minutes when generating store list")), 180000);
       });
 
       let completion: OpenAI.Chat.Completions.ChatCompletion;
@@ -143,7 +66,7 @@ export const aiGenerateServiceOpenAI = {
           timeoutPromise,
         ])) as OpenAI.Chat.Completions.ChatCompletion;
       } catch (timeoutError) {
-        console.log("OpenAI API timed out, retrying...");
+        console.log("OpenAI API timed out, retrying...", timeoutError);
         // Retry the API call
         completion = await openai.chat.completions.create({
           messages: [{ role: "user", content: prompt }],
@@ -152,39 +75,28 @@ export const aiGenerateServiceOpenAI = {
         });
       }
 
-      console.log("Received response from OpenAI");
-
       if (!completion.choices[0].message.content) {
-        console.error("No content generated from OpenAI");
+        console.error("No content generated from OpenAI when generating store list");
         throw new Error("No content generated");
       }
 
-      console.log("Parsing JSON response...");
       const content = JSON.parse(completion.choices[0].message.content);
-      console.log(`Parsed content with ${content.stores.length} stores`);
 
       return content.stores;
     } catch (error) {
-      console.error("OpenAI API error:", error);
+      console.error("OpenAI API error when generating store list:", error);
       if (error instanceof Error) {
         console.error("Error message:", error.message);
-        console.error("Error stack:", error.stack);
       }
       throw error; // Re-throw the error after logging
     }
   },
-  summarizeArticle: async (
-    articleContext: scrapedWebPages[],
-    formData: formData,
-    orgId: string,
-    module: Module
-  ): Promise<scrapedWebPagesSummarized[]> => {
+  summarizeArticle: async (articleContext: scrapedWebPages[], formData: formData, orgId: string, module: Module): Promise<scrapedWebPages[]> => {
     for (const store of articleContext) {
-      const [storeName, data] = Object.entries(store)[0];
       try {
         // Type guard to check if it's a content object
-        if ('content' in data) {
-          const parsedContent = JSON.parse(data.content);
+        if ("content" in store) {
+          const parsedContent = JSON.parse(store.content);
           const orgModuleAccess = await orgModuleAccessRepository.findOneBy({
             orgId: orgId,
             moduleId: module.id,
@@ -208,23 +120,23 @@ export const aiGenerateServiceOpenAI = {
           }
 
           // Now TypeScript knows this is a content object
-          (data as { content: string; summary?: any }).summary = summary;
+          store.summary = summary;
         }
       } catch (error) {
-        console.error(`Error processing ${storeName}:`, error);
+        console.error(`Error processing ${store.webpageName}:`, error);
         // Handle error case
-        (data as { error: string }).error = `Failed to process: ${(error as Error).message}`;
+        store.error = `Failed to process: ${(error as Error).message}`;
       }
     }
 
-    return articleContext as scrapedWebPagesSummarized[];
+    return articleContext;
   },
   generateArticle: async (
-    articleContext: Array<Record<string, any>> | any,
+    articleContext: scrapedWebPages[],
     contentId: number,
     orgId: string,
     module: Module,
-    internetSearch: string
+    internetSearch?: string
   ): Promise<string> => {
     // Add null check before using Object.keys
     const orgPreference = await orgPreferenceRepository.findOneBy({
@@ -239,23 +151,19 @@ export const aiGenerateServiceOpenAI = {
       throw new Error("No content item found for the provided ID");
     }
     // Filter only essential data if websiteScraping is enabled
-    const contextForPrompt = module.webScraper && Array.isArray(articleContext) && articleContext
+    const contextForPrompt =
+      module.webScraper && Array.isArray(articleContext) && articleContext
         ? articleContext.map((store) => {
             const [storeName, data] = Object.entries(store)[0];
             return {
               store: storeName,
-              summary:
-                (data as { summary?: string }).summary ||
-                "No summary available",
+              summary: (data as { summary?: string }).summary || "No summary available",
               url: (data as { url?: string }).url || "No url available",
             };
           })
         : articleContext || { basicInfo: "No context available" }; // Fallback if articleContext is null/undefined
 
-    const orgModulePrompt = await databaseService.getPromptByModuleAndOrgId(
-      module.id,
-      orgId
-    );
+    const orgModulePrompt = await databaseService.getPromptByModuleAndOrgId(module.id, orgId);
 
     let outputFormat = "markdown";
     if (module.outputFormat === "markdown") {
@@ -301,8 +209,6 @@ export const aiGenerateServiceOpenAI = {
         ${module.purpose || "Genereer een SEO-vriendelijk artikel"}
         `;
 
-    console.log("DIT IS DE Prompt:", prompt);
-
     const completion = await openai.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
       model: "o3",
@@ -313,26 +219,9 @@ export const aiGenerateServiceOpenAI = {
     }
 
     const article = completion.choices[0].message.content;
-
-    // const newArticle = new Article();
-    // newArticle.text = article || "";
-    // newArticle.contentCalendarId = contentItem.id || 0;
-    // newArticle.status = "published";
-    // newArticle.pagepath =
-    //   contentItem.title
-    //     .toLowerCase()
-    //     .replace(/[^a-z0-9\s-]/g, "")
-    //     .replace(/\s+/g, "-") + contentItem.id.toString() || "";
-    // newArticle.orgId = orgId;
-    // newArticle.outputFormat = outputFormat;
-    // await articleRepository.save(newArticle);
-
-    // contentItem.status = "published";
-    // await contentRepository.save(contentItem);
-
     return article;
   },
-  validateFormData: async (formData: any, orgId: string) => {
+  validateFormData: async (formData: formData, orgId: string) => {
     const orgPreference = await orgPreferenceRepository.findOneBy({
       orgId: orgId,
     });
@@ -341,7 +230,6 @@ export const aiGenerateServiceOpenAI = {
     }
 
     const prompt = `        
-
         Aan jou de taak om te gaan valideren of de form data correct is. Dit ga je doen op basis van de volgende regels:
         ${JSON.stringify(orgPreference.checkFormDataPrompt)}
         
@@ -361,8 +249,6 @@ export const aiGenerateServiceOpenAI = {
                 ...
             ]
         }
-
-
         `;
     const completion = await openai.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
@@ -370,50 +256,49 @@ export const aiGenerateServiceOpenAI = {
       response_format: { type: "json_object" },
     });
 
-    const validation = JSON.parse(
-      completion.choices[0].message.content || "{}"
-    );
+    const validation = JSON.parse(completion.choices[0].message.content || "{}");
     return validation;
   },
   generateImageDescription: async (images: imagePayloadWithUrls) => {
     const result: imagesWithDescription = { images: [] };
 
     for (const image of images.images) {
-      console.log("Now at number:", result.images.length + 1, "of", images.images.length);
       try {
-        console.log("Generating image description for", image);
         const response = await openai.chat.completions.create({
           model: "gpt-4o-mini",
           messages: [
             {
               role: "user",
               content: [
-                { type: "text", text: "You are an expert at describing images. Please describe the image in as much detail as possible. These descriptions will be used to find similar images for the user via a vector search." },
-                { type: "image_url", image_url: { url: process.env.R2_PUBLIC_URL +"/" + image.uniqueFilename } }
-              ]
-            }
+                {
+                  type: "text",
+                  text: "You are an expert at describing images. Please describe the image in as much detail as possible. These descriptions will be used to find similar images for the user via a vector search.",
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: process.env.R2_PUBLIC_URL + "/" + image.uniqueFilename,
+                  },
+                },
+              ],
+            },
           ],
-          max_tokens: 300
+          max_tokens: 300,
         });
-
-        console.log("Response of",image,response.choices[0])
-
         result.images.push({
           ...image,
-          description: response.choices[0]?.message?.content || "No description generated"
+          description: response.choices[0]?.message?.content || "No description generated",
         });
       } catch (error) {
         console.error("Error generating image description:", error);
         result.images.push({
           ...image,
-          description: "No description generated by OpenAI"
+          description: "No description generated by OpenAI",
         });
       }
     }
-    console.log("Result--->:", result);
     return result;
   },
-
 
   generateDescriptionEmbedding: async (images: imagesWithDescription): Promise<imagesWithEmbeddings> => {
     const result: imagesWithEmbeddings = { images: [] };
@@ -423,17 +308,17 @@ export const aiGenerateServiceOpenAI = {
         model: "text-embedding-3-small",
         input: image.description,
         encoding_format: "float",
-    });
+      });
 
-    result.images.push({
-      ...image,
-      embedding: embedding.data[0].embedding
-    });
-  }
+      result.images.push({
+        ...image,
+        embedding: embedding.data[0].embedding,
+      });
+    }
 
     return result;
   },
-  generateNearestNeighborEmbedding: async (draftArticle: any) => {
+  generateNearestNeighborEmbedding: async (draftArticle: string) => {
     const prompt = `
 Je bent een expert in het vinden van afbeeldingen die perfect aansluiten bij een tekst.  
 Voor iedere paragraaf of subkop in het onderstaande artikel maak je **één** beschrijving
@@ -479,10 +364,7 @@ Geef **uitsluitend** geldig JSON terug in het volgende formaat:
       throw new Error("No content generated by OpenAI");
     }
 
-    console.log("Completion searchembeddings--->:", completion.choices[0].message.content);
-
     const description = JSON.parse(completion.choices[0].message.content).paragraphs;
-
     const searchEmbeddings: imagesSearchEmbeddings[] = [];
 
     for (const paragraph of description) {
@@ -494,7 +376,7 @@ Geef **uitsluitend** geldig JSON terug in het volgende formaat:
       searchEmbeddings.push({
         paragraaf: paragraph.paragraaf,
         beschrijving_afbeelding: paragraph.beschrijving_afbeelding,
-        searchEmbedding: embedding.data[0].embedding
+        searchEmbedding: embedding.data[0].embedding,
       });
     }
 
@@ -502,47 +384,47 @@ Geef **uitsluitend** geldig JSON terug in het volgende formaat:
   },
 
   simplePrompt: async (prompt: string, model: string): Promise<string> => {
-    console.log("Prompt--->:", prompt);
     const completion = await openai.chat.completions.create({
       model: model,
       messages: [{ role: "user", content: prompt }],
     });
-    console.log("Completion--->:", completion.choices[0].message.content);
     return completion.choices[0].message.content || "No response from OpenAI";
   },
 
-  translateContent: async (content: string): Promise<{results: { language: string, translation: string, original: string }[]}> => {
-    
-    const results: { language: string, translation: string, original: string }[] = [];
-
+  translateContent: async (
+    content: string
+  ): Promise<{
+    results: { language: string; translation: string; original: string }[];
+  }> => {
+    const results: {
+      language: string;
+      translation: string;
+      original: string;
+    }[] = [];
     for (const prompt of translationPrompts.translationPrompts) {
-
-
-      const systemPrompt = prompt.language_prompt + `, 
+      const systemPrompt =
+        prompt.language_prompt +
+        `, 
       Always answer in this JSON format 
         {
           "language": "language",
           "original": "original text",
           "translation": "translated text"
-        }`
-      const userPrompt = JSON.stringify(content) 
-
-      console.log("SystemPrompt--->:", systemPrompt);
-      console.log("UserPrompt--->:", userPrompt);
-
+        }`;
+      const userPrompt = JSON.stringify(content);
       const completion = await openai.chat.completions.create({
         model: "o3",
         response_format: { type: "json_object" },
         messages: [
-          { 
-            role: "system", 
+          {
+            role: "system",
             content: systemPrompt,
           },
-          { 
-            role: "user", 
+          {
+            role: "user",
             content: userPrompt,
-          }
-        ]
+          },
+        ],
       });
 
       if (!completion.choices[0].message.content) {
@@ -552,29 +434,33 @@ Geef **uitsluitend** geldig JSON terug in het volgende formaat:
       results.push({
         language: prompt.language,
         translation: JSON.parse(completion.choices[0].message.content).translation,
-        original: JSON.parse(completion.choices[0].message.content).original
+        original: JSON.parse(completion.choices[0].message.content).original,
       });
     }
 
     return { results };
-  }
+  },
 };
 
 export const aiGenerateServiceGemini = {
-
   AIinternetSearch: async (query: string): Promise<string> => {
     const response = await gemini.models.generateContent({
       model: "gemini-2.5-pro-preview-03-25",
       contents: [query],
       config: {
-        tools: [{googleSearch:{}}],
+        tools: [{ googleSearch: {} }],
       },
     });
 
+    if (!response) {
+      throw new Error("No responsefrom Gemini");
+    }
     if (!response.candidates?.[0]?.content?.parts?.[0]?.text) {
-      throw new Error("No response or wrong response format from Gemini");
+      throw new Error("wrong response format from Gemini");
+    }
+    if (typeof response.candidates[0].content.parts[0].text !== "string") {
+      throw new Error("Response text from Gemini is not a string");
     }
     return response.candidates[0].content.parts[0].text;
-  }
-
-}
+  },
+};

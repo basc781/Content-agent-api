@@ -8,7 +8,7 @@ export interface form_check_input {
 
 export interface formData {
   titel: string;
-  [key: string]: any;
+  [key: string]: string | boolean | string[] | number | undefined;
 }
 
 export interface generateContentItemPayload {
@@ -19,12 +19,12 @@ export interface generateContentItemPayload {
 
 // Basic field definition
 export interface FormField {
-  id:  string;
-  type: 'text' | 'textarea' | 'select' | 'date' | 'checkbox' | 'radio';
+  id: string;
+  type: "text" | "textarea" | "select" | "date" | "checkbox" | "radio";
   label: string;
   placeholder?: string;
   required?: boolean;
-  options?: Array<{ label: string; value: string }>;  // For select, checkbox, radio
+  options?: Array<{ label: string; value: string }>; // For select, checkbox, radio
 }
 
 // Form schema definition
@@ -91,37 +91,43 @@ export interface imagesSearchEmbeddings {
 }
 
 export interface contentItemContext {
+  orgId: string;
   formData: formData;
   contentCalendarId: number;
-  availableStores: string;
-  filteredStoresUrls: string[];
-  scrapedWebPages: scrapedWebPages[];
-  summarizedContext: scrapedWebPagesSummarized[];
-  draftArticle: string;
+  availableStores?: string;
+  filteredStoresUrls?: string[];
+  scrapedWebPages?: scrapedWebPages[];
+  summarizedContext?: scrapedWebPages[];
+  draftArticle?: string;
   module: Module;
-  internetSearch: string;
-  nearestNeighborEmbeddings:imagesSearchEmbeddings[];
-  relevantAssets:imagesSearchEmbeddings[];
+  internetSearch?: string;
+  nearestNeighborEmbeddings?: imagesSearchEmbeddings[];
+  relevantAssets?: imagesSearchEmbeddings[];
   finalArticle: string;
+  assetUrls?: string[];
+  finalPrompt: string;
+}
+
+export interface translateItemContext {
+  orgId: string;
+  formData: formData;
+  contentCalendarId: number;
+  finalContentItem: finalContentItem;
+  module: Module;
+}
+
+export interface finalContentItem {
+  results: {
+    language: string;
+    translation: string;
+    original: string;
+  }[];
 }
 
 export interface scrapedWebPages {
-  [webpageName: string]: {
-    url: string;
-    content: string;
-  } | {
-    url: string;
-    error: string;
-  }
-}
-
-export interface scrapedWebPagesSummarized {
-  [webpageName: string]: {
-    url: string;
-    content: string;
-    summary: string;
-  } | {
-    url: string;
-    error: string;
-  }
+  webpageName: string;
+  url: string;
+  content: string;
+  error?: string;
+  summary?: string;
 }

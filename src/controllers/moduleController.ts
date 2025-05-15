@@ -25,8 +25,14 @@ export const moduleController = {
         modules: moduleMap,
       });
     } catch (error) {
-      console.error("Article generation error:", error);
-      res.status(500).json({ error: "Failed to generate articles" });
+      console.error("Error in getModules:", error);
+      res.status(500).json({
+        error: "Internal server error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+      });
     }
   },
 
@@ -44,9 +50,16 @@ export const moduleController = {
         return;
       }
       const module = await moduleService.getModuleBySlug(orgId, moduleSlug);
-      res.status(200).json({module: module || null,});
+      res.status(200).json({ module: module || null });
     } catch (error) {
-      res.status(500).json({ error: "Failed to check module access" });
+      console.error("Error in checkModuleAccess:", error);
+      res.status(500).json({
+        error: "Internal server error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+      });
     }
   },
 };

@@ -8,4 +8,3 @@ export const routes = Router();
 routes.use("/content", contentRouter);
 routes.use("/modules", moduleRouter);
 routes.use("/images", imageRouter);
-

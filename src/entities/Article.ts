@@ -34,7 +34,11 @@ export class Article {
   status!: string;
 
   //column with the type of formatting of the article, this can be json or markdown for now
-  @Column({ type: "enum", enum: ["markdown", "json","emailHTML"], nullable: false })
+  @Column({
+    type: "enum",
+    enum: ["markdown", "json", "emailHTML"],
+    nullable: false,
+  })
   outputFormat!: string;
 
   @Column()

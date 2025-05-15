@@ -8,6 +8,7 @@ import {
 } from "typeorm";
 import { Article } from "./Article.js";
 import { Module } from "./Module.js";
+import { formData } from "../types/types.js";
 
 @Entity()
 export class ContentCalendar {
@@ -21,7 +22,7 @@ export class ContentCalendar {
   title!: string;
 
   @Column("json")
-  formData!: JSON;
+  formData!: formData;
 
   @Column()
   status!: string;
