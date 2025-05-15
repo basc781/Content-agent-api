@@ -1,36 +1,30 @@
 import { Image } from "../entities/images.js";
-
-export interface ArticleFormData {
-  titel: string;
-  event: string;
-  beschrijving: string;
-  potentialKeywords: string;
-  datum: string;
-  winkelvoorbeelden: string;
-  article?: string;
-}
+import { Module } from "../entities/Module.js";
 
 export interface form_check_input {
   form_input: string;
   rules: string;
 }
 
-export interface ArticleGenerationRequest {
+export interface formData {
+  titel: string;
+  [key: string]: string | boolean | string[] | number | undefined;
+}
+
+export interface generateContentItemPayload {
   orgId: string;
-  formData: ArticleFormData;
-  website?: string;
-  moduleId?: number;
-  imageUrls?: string[];
+  moduleId: number;
+  formData: formData;
 }
 
 // Basic field definition
 export interface FormField {
-  id:  string;
-  type: 'text' | 'textarea' | 'select' | 'date' | 'checkbox' | 'radio';
+  id: string;
+  type: "text" | "textarea" | "select" | "date" | "checkbox" | "radio";
   label: string;
   placeholder?: string;
   required?: boolean;
-  options?: Array<{ label: string; value: string }>;  // For select, checkbox, radio
+  options?: Array<{ label: string; value: string }>; // For select, checkbox, radio
 }
 
 // Form schema definition
@@ -94,4 +88,46 @@ export interface imagesSearchEmbeddings {
   beschrijving_afbeelding: string;
   searchEmbedding: number[];
   assets?: Image[];
+}
+
+export interface contentItemContext {
+  orgId: string;
+  formData: formData;
+  contentCalendarId: number;
+  availableStores?: string;
+  filteredStoresUrls?: string[];
+  scrapedWebPages?: scrapedWebPages[];
+  summarizedContext?: scrapedWebPages[];
+  draftArticle?: string;
+  module: Module;
+  internetSearch?: string;
+  nearestNeighborEmbeddings?: imagesSearchEmbeddings[];
+  relevantAssets?: imagesSearchEmbeddings[];
+  finalArticle: string;
+  assetUrls?: string[];
+  finalPrompt: string;
+}
+
+export interface translateItemContext {
+  orgId: string;
+  formData: formData;
+  contentCalendarId: number;
+  finalContentItem: finalContentItem;
+  module: Module;
+}
+
+export interface finalContentItem {
+  results: {
+    language: string;
+    translation: string;
+    original: string;
+  }[];
+}
+
+export interface scrapedWebPages {
+  webpageName: string;
+  url: string;
+  content: string;
+  error?: string;
+  summary?: string;
 }

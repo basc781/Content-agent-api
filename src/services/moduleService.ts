@@ -6,11 +6,12 @@ export const moduleService = {
   /**
    * Generate article content through a configurable pipeline
    */
-  getModules: async (orgId: string): Promise<(Module & { accessId?: number })[]> => {
+  getModules: async (
+    orgId: string
+    ): Promise<(Module & { accessId?: number })[]> => {
     try {
       // Get user preferences
       const modules = await databaseService.getOrgModules(orgId);
-      console.log("DIT ZIJN DE MODULES",modules);
       return modules;
     } catch (error) {
       console.error("Error getting modules:", error);
@@ -24,7 +25,7 @@ export const moduleService = {
   getModuleBySlug: async (
     orgId: string,
     moduleSlug: string
-  ): Promise<Module | null> => {
+  ): Promise<Module> => {
     try {
       const moduleRepository = AppDataSource.getRepository(Module);
 
@@ -36,13 +37,13 @@ export const moduleService = {
         .andWhere("module.slug = :moduleSlug", { moduleSlug })
         .getOne();
 
-      // Debug logging
-      console.log("Full query result:", JSON.stringify(module, null, 2));
-      
+      if (!module) {
+        throw new Error("Module not found");
+      }
       return module;
     } catch (error) {
       console.error("Error getting module by slug:", error);
-      throw error;
+      throw new Error("Failed to find module by slug");
     }
   },
 };

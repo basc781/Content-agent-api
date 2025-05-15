@@ -45,8 +45,8 @@ export const analyseImageService = {
       return imagesWithUrls;
       
     } catch (error) {
-      console.error("Error generating upload URLs:", error);
-      throw new Error("Failed to generate upload URLs");
+      console.error("Error generating authenticated URLs:", error);
+      throw new Error("Failed to generate authenticated URLs");
     }
   }
 };

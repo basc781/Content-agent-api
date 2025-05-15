@@ -7,12 +7,10 @@ export const moduleController = {
   getModules: async (req: Request, res: Response): Promise<void> => {
     try {
       const orgId = getAuth(req).orgId;
-
       if (!orgId) {
         res.status(401).json({ error: "Unauthorized" });
         return;
       }
-
       // Get all modules for the organization
       const modules = await moduleService.getModules(orgId);
 
@@ -23,12 +21,18 @@ export const moduleController = {
         accessId: module.accessId,
       }));
 
-      res.json({
+      res.status(200).json({
         modules: moduleMap,
       });
     } catch (error) {
-      console.error("Article generation error:", error);
-      res.status(500).json({ error: "Failed to generate articles" });
+      console.error("Error in getModules:", error);
+      res.status(500).json({
+        error: "Internal server error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+      });
     }
   },
 
@@ -36,26 +40,26 @@ export const moduleController = {
   checkModuleAccess: async (req: Request, res: Response): Promise<void> => {
     try {
       const orgId = getAuth(req).orgId;
-      const { moduleSlug } = req.params;
-
       if (!orgId) {
         res.status(401).json({ error: "Unauthorized" });
         return;
       }
-
+      const { moduleSlug } = req.params;
       if (!moduleSlug) {
         res.status(400).json({ error: "Module slug is required" });
         return;
       }
-
       const module = await moduleService.getModuleBySlug(orgId, moduleSlug);
-
-      res.json({
-        module: module || null,
-      });
+      res.status(200).json({ module: module || null });
     } catch (error) {
-      console.error("Module access check error:", error);
-      res.status(500).json({ error: "Failed to check module access" });
+      console.error("Error in checkModuleAccess:", error);
+      res.status(500).json({
+        error: "Internal server error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+      });
     }
   },
 };
